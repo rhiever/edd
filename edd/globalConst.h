@@ -1,9 +1,9 @@
 /*
  * globalConst.h
  *
- * This file is part of the Evolution of Swarming project.
+ * This file is part of the Evolved Digit Detector project.
  *
- * Copyright 2012 Randal S. Olson, Arend Hintze.
+ * Copyright 2014 Randal S. Olson, Arend Hintze.
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -25,6 +25,5 @@
 #define     cPI             3.14159265
 #define     randDouble      ((double)rand() / (double)RAND_MAX)
 #define     maxNodes        32
-#define     swarmSize       50
 
 #endif
