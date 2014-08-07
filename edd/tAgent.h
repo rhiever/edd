@@ -46,13 +46,10 @@ public:
 #endif
 	
 	tAgent *ancestor;
-    tAgent *predator;
 	unsigned int nrPointingAtMe;
 	unsigned char states[maxNodes],newStates[maxNodes];
 	double fitness,convFitness;
 	vector<double> fitnesses;
-	int food;
-    double visionAngle;
 	
 	double xPos,yPos,direction;
 	double sX,sY;

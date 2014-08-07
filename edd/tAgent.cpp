@@ -29,7 +29,6 @@
 tAgent::tAgent(){
 	nrPointingAtMe=1;
 	ancestor = NULL;
-    predator = NULL;
 	for(int i=0;i<maxNodes;i++)
     {
 		states[i]=0;
@@ -42,9 +41,7 @@ tAgent::tAgent(){
 	hmmus.clear();
 	nrOfOffspring=0;
 	retired=false;
-	food=0;
     totalSteps=0;
-    visionAngle = 180.0 / 2.0;
 #ifdef useANN
 	ANN=new tANN;
 #endif
@@ -55,11 +52,6 @@ tAgent::~tAgent()
 	for (int i = 0; i < hmmus.size(); ++i)
     {
         delete hmmus[i];
-    }
-    
-    if (predator != NULL)
-    {
-        delete predator;
     }
     
 	if (ancestor!=NULL)
@@ -146,12 +138,6 @@ void tAgent::inherit(tAgent *from, double mutationRate, int theTime, bool evolve
 	from->nrOfOffspring++;
 	genome.clear();
 	genome.resize(from->genome.size());
-    visionAngle = from->visionAngle;
-    
-    if (evolveRetina && randDouble < 0.05)
-    {
-        visionAngle += (randDouble * 50.0) - 25.0;
-    }
     
 	for(i=0;i<nucleotides;i++)
     {

@@ -1,4 +1,4 @@
-This is Evolved Digit Detector project.
+This is the Evolved Digit Detector project.
 
 Copyright 2014 Randal S. Olson, Arend Hintze.
 
