@@ -55,6 +55,12 @@ bool    display_only                = false;
 bool    display_directory           = false;
 bool    make_logic_table            = false;
 bool    make_dot_edd                = false;
+int     gridSizeX                   = 5;
+int     gridSizeY                   = 5;
+bool    zoomingCamera               = false;
+bool    randomPlacement             = false;
+bool    noise                       = false;
+float   noiseAmount                 = 0.05;
 
 int main(int argc, char *argv[])
 {
@@ -67,7 +73,6 @@ int main(int argc, char *argv[])
     
     // initial object setup
     eddAgents.resize(populationSize);
-	game = new tGame;
 	eddAgent = new tAgent;
     
     // time-based seed by default. can change with command-line parameter.
@@ -188,7 +193,47 @@ int main(int argc, char *argv[])
             eddDotFileName = dfn.str();
             make_dot_edd = true;
         }
+        
+        // -gs [int] [int]: set the digit grid size
+        else if (strcmp(argv[i], "-gs") == 0 && (i + 2) < argc)
+        {
+            ++i;
+            gridSizeX = atoi(argv[i]);
+            ++i;
+            gridSizeY = atoi(argv[i]);
+            
+            if (gridSizeX < 5 || gridSizeY < 5)
+            {
+                cerr << "minimum grid size dimension is 5." << endl;
+                exit(0);
+            }
+        }
+        
+        // -zc: allow the edd agent to use a zooming camera
+        else if (strcmp(argv[i], "-gs") == 0)
+        {
+            zoomingCamera = true;
+        }
+        
+        // -rp: randomly place the digits within the grid. if randomPlacement = false,
+        // the digits are always centered
+        else if (strcmp(argv[i], "-rp") == 0)
+        {
+            randomPlacement = true;
+        }
+        
+        // -noise [float]: add noise to the edd agent's camera; each input bit is flipped
+        // with the probability given (0.0 = never, 1.0 = always flipped)
+        else if (strcmp(argv[i], "-noise") == 0 && (i + 1) < argc)
+        {
+            noise = true;
+            ++i;
+            noiseAmount = atof(argv[i]);
+        }
     }
+    
+    // set up the game
+    game = new tGame;
     
     if (display_only || display_directory || make_interval_video || make_LOD_video)
     {
@@ -340,7 +385,7 @@ int main(int argc, char *argv[])
         
 		for(int i = 0; i < populationSize; ++i)
         {
-            game->executeGame(eddAgents[i], NULL, false);
+            game->executeGame(eddAgents[i], NULL, false, gridSizeX, gridSizeY, zoomingCamera, randomPlacement, noise, noiseAmount);
             
             eddAvgFitness += eddAgents[i]->fitness;
             
@@ -364,7 +409,7 @@ int main(int argc, char *argv[])
             
             if (update % make_video_frequency == 0 || finalGeneration)
             {
-                string bestString = game->executeGame(bestEddAgent, NULL, true);
+                string bestString = game->executeGame(bestEddAgent, NULL, true, gridSizeX, gridSizeY, zoomingCamera, randomPlacement, noise, noiseAmount);
                 
                 if (finalGeneration)
                 {
@@ -449,7 +494,7 @@ int main(int argc, char *argv[])
     for (vector<tAgent*>::iterator it = saveLOD.begin(); it != saveLOD.end(); ++it)
     {
         // collect quantitative stats
-        game->executeGame(*it, LOD, false);
+        game->executeGame(*it, LOD, false, gridSizeX, gridSizeY, zoomingCamera, randomPlacement, noise, noiseAmount);
         
         // make video
         if (make_LOD_video)
@@ -477,7 +522,7 @@ string findBestRun(tAgent *eddAgent)
     
     for (int rep = 0; rep < 100; ++rep)
     {
-        reportString = game->executeGame(eddAgent, NULL, true);
+        reportString = game->executeGame(eddAgent, NULL, true, gridSizeX, gridSizeY, zoomingCamera, randomPlacement, noise, noiseAmount);
         
         if (eddAgent->fitness > bestFitness)
         {

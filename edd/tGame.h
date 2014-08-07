@@ -31,43 +31,15 @@
 
 using namespace std;
 
-class tOctuplet{
+class tGame
+{
 public:
-    vector<int> data;
-    void loadOctuplet(FILE *f);
-};
-
-class tExperiment{
-public:
-    vector<tOctuplet> dropSequences,sizeSequences,selfSequences;
-    vector<vector<vector<bool> > > shouldHit;
-    void loadExperiment(char *filename);
-    void showExperimentProtokoll(void);
-    int drops(void);
-    int sizes(void);
-    int selves(void);
-};
-
-class tGame{
-public:
-    tExperiment theExperiment;
-    string executeGame(tAgent* eddAgent, FILE *data_file, bool report);
+    string executeGame(tAgent* eddAgent, FILE *dataFile, bool report, int gridSizeX, int gridSizeY, bool zoomingCamera, bool randomPlacement, bool noise, float noiseAmount);
     tGame();
     ~tGame();
+    void placeDigit(vector<vector<vector<int>>> &digitGrid, int digit, int digitCenterX, int digitCenterY);
     double sum(vector<double> values);
     double average(vector<double> values);
     double variance(vector<double> values);
-    double mutualInformation(vector<int> A,vector<int>B);
-    double ei(vector<int> A,vector<int> B,int theMask);
-    double computeAtomicPhi(vector<int>A,int states);
-    double predictiveI(vector<int>A);
-    double nonPredictiveI(vector<int>A);
-    double predictNextInput(vector<int>A);
-    double computeR(vector<vector<int> > table,int howFarBack);
-    double computeOldR(vector<vector<int> > table);
-    double entropy(vector<int> list);
-    int neuronsConnectedToPreyRetina(tAgent *agent);
-    int neuronsConnectedToPredatorRetina(tAgent* agent);
-
 };
 #endif

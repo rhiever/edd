@@ -27,16 +27,66 @@
 
 // simulation-specific constants
 #define totalStepsInSimulation      2000
-#define eddSensors                  32
 
 tGame::tGame() { }
 
 tGame::~tGame() { }
 
 // runs the simulation for the given agent(s)
-string tGame::executeGame(tAgent* eddAgent, FILE *data_file, bool report)
+string tGame::executeGame(tAgent* eddAgent, FILE *dataFile, bool report, int gridSizeX, int gridSizeY, bool zoomingCamera, bool randomPlacement, bool noise, float noiseAmount)
 {
     string reportString = "";
+    
+    // grid that the digits are placed in
+    // first index is for the digit (0-9)
+    // following two indeces are the X and Y positions in that digit's grid
+    // (center - 2, center - 2) is the bottom-left corner of the digit
+    // the digit is always 5x5
+    vector<vector<vector<int>>> digitGrid;
+    digitGrid.resize(10);
+    
+    for (int digit = 0; digit < 10; ++digit)
+    {
+        digitGrid[digit].resize(gridSizeX);
+        for (int x = 0; x < gridSizeX; ++x)
+        {
+            digitGrid[digit][x].resize(gridSizeY);
+        }
+    }
+    
+    // if the digits are being randomly placed, place all 10 digits (0-9)
+    // in random spots on the grid at the beginning of every simulation
+    if (randomPlacement)
+    {
+        cerr << "random placement not yet implemented" << endl;
+        exit(0);
+    }
+    // otherwise, place all 10 digits (0-9) centered in the grid
+    else
+    {
+        int digitCenterX = (int)(gridSizeX / 2.0), digitCenterY = (int)(gridSizeY / 2.0);
+        
+        for (int digit = 0; digit < 10; ++digit)
+        {
+            placeDigit(digitGrid, digit, digitCenterX, digitCenterY);
+        }
+    }
+    
+    /* // visualize the digits
+    for (int digit = 0; digit < 10; ++digit)
+    {
+        cout << digit << endl;
+        
+        for (int y = gridSizeY - 1; y >= 0; --y)
+        {
+            for (int x = 0; x < gridSizeY; ++x)
+            {
+                cout << digitGrid[digit][x][y] << " ";
+            }
+            cout << endl;
+        }
+        cout << "---" << endl;
+    }*/
     
     // LOD data variables
     double eddFitness = 0.0;
@@ -44,8 +94,6 @@ string tGame::executeGame(tAgent* eddAgent, FILE *data_file, bool report)
     // set up brain for EDD agent
     eddAgent->setupPhenotype();
     eddAgent->fitness = 0.0;
-    
-    cout << "blagh" << endl;
     
     /*       BEGINNING OF SIMULATION LOOP       */
     
@@ -66,7 +114,7 @@ string tGame::executeGame(tAgent* eddAgent, FILE *data_file, bool report)
         
         
         /*       SAVE DATA FOR THE LOD FILE       */
-        if(data_file != NULL)
+        if(dataFile != NULL)
         {
             
         }
@@ -103,13 +151,6 @@ string tGame::executeGame(tAgent* eddAgent, FILE *data_file, bool report)
             default:
                 break;
         }
-        
-        /*       DETERMINE FITNESSES FOR THIS UPDATE       */
-        
-        eddFitness += 1.0;
-        
-        /*       END OF FITNESS CALCULATIONS       */
-        
     }
     /*       END OF SIMULATION LOOP       */
     
@@ -122,15 +163,417 @@ string tGame::executeGame(tAgent* eddAgent, FILE *data_file, bool report)
     }
     
     // output to data file, if provided
-    if (data_file != NULL)
+    if (dataFile != NULL)
     {
-        fprintf(data_file, "%d,%f\n",
+        fprintf(dataFile, "%d,%f\n",
                 eddAgent->born,         // update born
                 eddAgent->fitness       // edd agent fitness
                 );
     }
     
+    exit(0);
     return reportString;
+}
+
+// place the given digit on the digitGrid at the given point (digitCenterX, digitCenterY)
+void tGame::placeDigit(vector<vector<vector<int>>> &digitGrid, int digit, int digitCenterX, int digitCenterY)
+{
+    switch (digit)
+    {
+        case 0:
+            // ~ 0 ~
+            
+            // 0 1 1 1 0
+            // 0 1 0 1 0
+            // 0 1 0 1 0
+            // 0 1 0 1 0
+            // 0 1 1 1 0
+            digitGrid[0][digitCenterX - 2][digitCenterY - 2] = 0;
+            digitGrid[0][digitCenterX - 1][digitCenterY - 2] = 1;
+            digitGrid[0][digitCenterX][digitCenterY - 2] = 1;
+            digitGrid[0][digitCenterX + 1][digitCenterY - 2] = 1;
+            digitGrid[0][digitCenterX + 2][digitCenterY - 2] = 0;
+            
+            digitGrid[0][digitCenterX - 2][digitCenterY - 1] = 0;
+            digitGrid[0][digitCenterX - 1][digitCenterY - 1] = 1;
+            digitGrid[0][digitCenterX][digitCenterY - 1] = 0;
+            digitGrid[0][digitCenterX + 1][digitCenterY - 1] = 1;
+            digitGrid[0][digitCenterX + 2][digitCenterY - 1] = 0;
+            
+            digitGrid[0][digitCenterX - 2][digitCenterY] = 0;
+            digitGrid[0][digitCenterX - 1][digitCenterY] = 1;
+            digitGrid[0][digitCenterX][digitCenterY] = 0;
+            digitGrid[0][digitCenterX + 1][digitCenterY] = 1;
+            digitGrid[0][digitCenterX + 2][digitCenterY] = 0;
+            
+            digitGrid[0][digitCenterX - 2][digitCenterY + 1] = 0;
+            digitGrid[0][digitCenterX - 1][digitCenterY + 1] = 1;
+            digitGrid[0][digitCenterX][digitCenterY + 1] = 0;
+            digitGrid[0][digitCenterX + 1][digitCenterY + 1] = 1;
+            digitGrid[0][digitCenterX + 2][digitCenterY + 1] = 0;
+            
+            digitGrid[0][digitCenterX - 2][digitCenterY + 2] = 0;
+            digitGrid[0][digitCenterX - 1][digitCenterY + 2] = 1;
+            digitGrid[0][digitCenterX][digitCenterY + 2] = 1;
+            digitGrid[0][digitCenterX + 1][digitCenterY + 2] = 1;
+            digitGrid[0][digitCenterX + 2][digitCenterY + 2] = 0;
+            break;
+            
+        case 1:
+            // ~ 1 ~
+            
+            // 0 0 1 0 0
+            // 0 0 1 0 0
+            // 0 0 1 0 0
+            // 0 0 1 0 0
+            // 0 0 1 0 0
+            digitGrid[1][digitCenterX - 2][digitCenterY - 2] = 0;
+            digitGrid[1][digitCenterX - 1][digitCenterY - 2] = 0;
+            digitGrid[1][digitCenterX][digitCenterY - 2] = 1;
+            digitGrid[1][digitCenterX + 1][digitCenterY - 2] = 0;
+            digitGrid[1][digitCenterX + 2][digitCenterY - 2] = 0;
+            
+            digitGrid[1][digitCenterX - 2][digitCenterY - 1] = 0;
+            digitGrid[1][digitCenterX - 1][digitCenterY - 1] = 0;
+            digitGrid[1][digitCenterX][digitCenterY - 1] = 1;
+            digitGrid[1][digitCenterX + 1][digitCenterY - 1] = 0;
+            digitGrid[1][digitCenterX + 2][digitCenterY - 1] = 0;
+            
+            digitGrid[1][digitCenterX - 2][digitCenterY] = 0;
+            digitGrid[1][digitCenterX - 1][digitCenterY] = 0;
+            digitGrid[1][digitCenterX][digitCenterY] = 1;
+            digitGrid[1][digitCenterX + 1][digitCenterY] = 0;
+            digitGrid[1][digitCenterX + 2][digitCenterY] = 0;
+            
+            digitGrid[1][digitCenterX - 2][digitCenterY + 1] = 0;
+            digitGrid[1][digitCenterX - 1][digitCenterY + 1] = 0;
+            digitGrid[1][digitCenterX][digitCenterY + 1] = 1;
+            digitGrid[1][digitCenterX + 1][digitCenterY + 1] = 0;
+            digitGrid[1][digitCenterX + 2][digitCenterY + 1] = 0;
+            
+            digitGrid[1][digitCenterX - 2][digitCenterY + 2] = 0;
+            digitGrid[1][digitCenterX - 1][digitCenterY + 2] = 0;
+            digitGrid[1][digitCenterX][digitCenterY + 2] = 1;
+            digitGrid[1][digitCenterX + 1][digitCenterY + 2] = 0;
+            digitGrid[1][digitCenterX + 2][digitCenterY + 2] = 0;
+            break;
+            
+        case 2:
+            // ~ 2 ~
+            
+            // 0 1 1 1 0
+            // 0 0 0 1 0
+            // 0 0 1 0 0
+            // 0 1 0 0 0
+            // 0 1 1 1 0
+            digitGrid[2][digitCenterX - 2][digitCenterY - 2] = 0;
+            digitGrid[2][digitCenterX - 1][digitCenterY - 2] = 1;
+            digitGrid[2][digitCenterX][digitCenterY - 2] = 1;
+            digitGrid[2][digitCenterX + 1][digitCenterY - 2] = 1;
+            digitGrid[2][digitCenterX + 2][digitCenterY - 2] = 0;
+            
+            digitGrid[2][digitCenterX - 2][digitCenterY - 1] = 0;
+            digitGrid[2][digitCenterX - 1][digitCenterY - 1] = 1;
+            digitGrid[2][digitCenterX][digitCenterY - 1] = 0;
+            digitGrid[2][digitCenterX + 1][digitCenterY - 1] = 0;
+            digitGrid[2][digitCenterX + 2][digitCenterY - 1] = 0;
+            
+            digitGrid[2][digitCenterX - 2][digitCenterY] = 0;
+            digitGrid[2][digitCenterX - 1][digitCenterY] = 0;
+            digitGrid[2][digitCenterX][digitCenterY] = 1;
+            digitGrid[2][digitCenterX + 1][digitCenterY] = 0;
+            digitGrid[2][digitCenterX + 2][digitCenterY] = 0;
+            
+            digitGrid[2][digitCenterX - 2][digitCenterY + 1] = 0;
+            digitGrid[2][digitCenterX - 1][digitCenterY + 1] = 0;
+            digitGrid[2][digitCenterX][digitCenterY + 1] = 0;
+            digitGrid[2][digitCenterX + 1][digitCenterY + 1] = 1;
+            digitGrid[2][digitCenterX + 2][digitCenterY + 1] = 0;
+            
+            digitGrid[2][digitCenterX - 2][digitCenterY + 2] = 0;
+            digitGrid[2][digitCenterX - 1][digitCenterY + 2] = 1;
+            digitGrid[2][digitCenterX][digitCenterY + 2] = 1;
+            digitGrid[2][digitCenterX + 1][digitCenterY + 2] = 1;
+            digitGrid[2][digitCenterX + 2][digitCenterY + 2] = 0;
+            break;
+            
+        case 3:
+            // ~ 3 ~
+            
+            // 0 1 1 1 0
+            // 0 0 0 1 0
+            // 0 0 1 1 0
+            // 0 0 0 1 0
+            // 0 1 1 1 0
+            digitGrid[3][digitCenterX - 2][digitCenterY - 2] = 0;
+            digitGrid[3][digitCenterX - 1][digitCenterY - 2] = 1;
+            digitGrid[3][digitCenterX][digitCenterY - 2] = 1;
+            digitGrid[3][digitCenterX + 1][digitCenterY - 2] = 1;
+            digitGrid[3][digitCenterX + 2][digitCenterY - 2] = 0;
+            
+            digitGrid[3][digitCenterX - 2][digitCenterY - 1] = 0;
+            digitGrid[3][digitCenterX - 1][digitCenterY - 1] = 0;
+            digitGrid[3][digitCenterX][digitCenterY - 1] = 0;
+            digitGrid[3][digitCenterX + 1][digitCenterY - 1] = 1;
+            digitGrid[3][digitCenterX + 2][digitCenterY - 1] = 0;
+            
+            digitGrid[3][digitCenterX - 2][digitCenterY] = 0;
+            digitGrid[3][digitCenterX - 1][digitCenterY] = 0;
+            digitGrid[3][digitCenterX][digitCenterY] = 1;
+            digitGrid[3][digitCenterX + 1][digitCenterY] = 1;
+            digitGrid[3][digitCenterX + 2][digitCenterY] = 0;
+            
+            digitGrid[3][digitCenterX - 2][digitCenterY + 1] = 0;
+            digitGrid[3][digitCenterX - 1][digitCenterY + 1] = 0;
+            digitGrid[3][digitCenterX][digitCenterY + 1] = 0;
+            digitGrid[3][digitCenterX + 1][digitCenterY + 1] = 1;
+            digitGrid[3][digitCenterX + 2][digitCenterY + 1] = 0;
+            
+            digitGrid[3][digitCenterX - 2][digitCenterY + 2] = 0;
+            digitGrid[3][digitCenterX - 1][digitCenterY + 2] = 1;
+            digitGrid[3][digitCenterX][digitCenterY + 2] = 1;
+            digitGrid[3][digitCenterX + 1][digitCenterY + 2] = 1;
+            digitGrid[3][digitCenterX + 2][digitCenterY + 2] = 0;
+            break;
+            
+        case 4:
+            // ~ 4 ~
+            
+            // 0 1 0 1 0
+            // 0 1 0 1 0
+            // 0 1 1 1 0
+            // 0 0 0 1 0
+            // 0 0 0 1 0
+            digitGrid[4][digitCenterX - 2][digitCenterY - 2] = 0;
+            digitGrid[4][digitCenterX - 1][digitCenterY - 2] = 0;
+            digitGrid[4][digitCenterX][digitCenterY - 2] = 0;
+            digitGrid[4][digitCenterX + 1][digitCenterY - 2] = 1;
+            digitGrid[4][digitCenterX + 2][digitCenterY - 2] = 0;
+            
+            digitGrid[4][digitCenterX - 2][digitCenterY - 1] = 0;
+            digitGrid[4][digitCenterX - 1][digitCenterY - 1] = 0;
+            digitGrid[4][digitCenterX][digitCenterY - 1] = 0;
+            digitGrid[4][digitCenterX + 1][digitCenterY - 1] = 1;
+            digitGrid[4][digitCenterX + 2][digitCenterY - 1] = 0;
+            
+            digitGrid[4][digitCenterX - 2][digitCenterY] = 0;
+            digitGrid[4][digitCenterX - 1][digitCenterY] = 1;
+            digitGrid[4][digitCenterX][digitCenterY] = 1;
+            digitGrid[4][digitCenterX + 1][digitCenterY] = 1;
+            digitGrid[4][digitCenterX + 2][digitCenterY] = 0;
+            
+            digitGrid[4][digitCenterX - 2][digitCenterY + 1] = 0;
+            digitGrid[4][digitCenterX - 1][digitCenterY + 1] = 1;
+            digitGrid[4][digitCenterX][digitCenterY + 1] = 0;
+            digitGrid[4][digitCenterX + 1][digitCenterY + 1] = 1;
+            digitGrid[4][digitCenterX + 2][digitCenterY + 1] = 0;
+            
+            digitGrid[4][digitCenterX - 2][digitCenterY + 2] = 0;
+            digitGrid[4][digitCenterX - 1][digitCenterY + 2] = 1;
+            digitGrid[4][digitCenterX][digitCenterY + 2] = 0;
+            digitGrid[4][digitCenterX + 1][digitCenterY + 2] = 1;
+            digitGrid[4][digitCenterX + 2][digitCenterY + 2] = 0;
+            break;
+            
+        case 5:
+            // ~ 5 ~
+            
+            // 0 1 1 1 0
+            // 0 1 0 0 0
+            // 0 1 1 1 0
+            // 0 0 0 1 0
+            // 0 1 1 1 0
+            digitGrid[5][digitCenterX - 2][digitCenterY - 2] = 0;
+            digitGrid[5][digitCenterX - 1][digitCenterY - 2] = 1;
+            digitGrid[5][digitCenterX][digitCenterY - 2] = 1;
+            digitGrid[5][digitCenterX + 1][digitCenterY - 2] = 1;
+            digitGrid[5][digitCenterX + 2][digitCenterY - 2] = 0;
+            
+            digitGrid[5][digitCenterX - 2][digitCenterY - 1] = 0;
+            digitGrid[5][digitCenterX - 1][digitCenterY - 1] = 0;
+            digitGrid[5][digitCenterX][digitCenterY - 1] = 0;
+            digitGrid[5][digitCenterX + 1][digitCenterY - 1] = 1;
+            digitGrid[5][digitCenterX + 2][digitCenterY - 1] = 0;
+            
+            digitGrid[5][digitCenterX - 2][digitCenterY] = 0;
+            digitGrid[5][digitCenterX - 1][digitCenterY] = 1;
+            digitGrid[5][digitCenterX][digitCenterY] = 1;
+            digitGrid[5][digitCenterX + 1][digitCenterY] = 1;
+            digitGrid[5][digitCenterX + 2][digitCenterY] = 0;
+            
+            digitGrid[5][digitCenterX - 2][digitCenterY + 1] = 0;
+            digitGrid[5][digitCenterX - 1][digitCenterY + 1] = 1;
+            digitGrid[5][digitCenterX][digitCenterY + 1] = 0;
+            digitGrid[5][digitCenterX + 1][digitCenterY + 1] = 0;
+            digitGrid[5][digitCenterX + 2][digitCenterY + 1] = 0;
+            
+            digitGrid[5][digitCenterX - 2][digitCenterY + 2] = 0;
+            digitGrid[5][digitCenterX - 1][digitCenterY + 2] = 1;
+            digitGrid[5][digitCenterX][digitCenterY + 2] = 1;
+            digitGrid[5][digitCenterX + 1][digitCenterY + 2] = 1;
+            digitGrid[5][digitCenterX + 2][digitCenterY + 2] = 0;
+            break;
+            
+        case 6:
+            // ~ 6 ~
+            
+            // 0 1 0 0 0
+            // 0 1 0 0 0
+            // 0 1 1 1 0
+            // 0 1 0 1 0
+            // 0 1 1 1 0
+            digitGrid[6][digitCenterX - 2][digitCenterY - 2] = 0;
+            digitGrid[6][digitCenterX - 1][digitCenterY - 2] = 1;
+            digitGrid[6][digitCenterX][digitCenterY - 2] = 1;
+            digitGrid[6][digitCenterX + 1][digitCenterY - 2] = 1;
+            digitGrid[6][digitCenterX + 2][digitCenterY - 2] = 0;
+            
+            digitGrid[6][digitCenterX - 2][digitCenterY - 1] = 0;
+            digitGrid[6][digitCenterX - 1][digitCenterY - 1] = 0;
+            digitGrid[6][digitCenterX][digitCenterY - 1] = 0;
+            digitGrid[6][digitCenterX + 1][digitCenterY - 1] = 1;
+            digitGrid[6][digitCenterX + 2][digitCenterY - 1] = 0;
+            
+            digitGrid[6][digitCenterX - 2][digitCenterY] = 0;
+            digitGrid[6][digitCenterX - 1][digitCenterY] = 1;
+            digitGrid[6][digitCenterX][digitCenterY] = 1;
+            digitGrid[6][digitCenterX + 1][digitCenterY] = 1;
+            digitGrid[6][digitCenterX + 2][digitCenterY] = 0;
+            
+            digitGrid[6][digitCenterX - 2][digitCenterY + 1] = 0;
+            digitGrid[6][digitCenterX - 1][digitCenterY + 1] = 1;
+            digitGrid[6][digitCenterX][digitCenterY + 1] = 0;
+            digitGrid[6][digitCenterX + 1][digitCenterY + 1] = 0;
+            digitGrid[6][digitCenterX + 2][digitCenterY + 1] = 0;
+            
+            digitGrid[6][digitCenterX - 2][digitCenterY + 2] = 0;
+            digitGrid[6][digitCenterX - 1][digitCenterY + 2] = 1;
+            digitGrid[6][digitCenterX][digitCenterY + 2] = 0;
+            digitGrid[6][digitCenterX + 1][digitCenterY + 2] = 0;
+            digitGrid[6][digitCenterX + 2][digitCenterY + 2] = 0;
+            break;
+            
+        case 7:
+            // ~ 7 ~
+            
+            // 0 1 1 1 0
+            // 0 0 0 1 0
+            // 0 0 0 1 0
+            // 0 0 0 1 0
+            // 0 0 0 1 0
+            digitGrid[7][digitCenterX - 2][digitCenterY - 2] = 0;
+            digitGrid[7][digitCenterX - 1][digitCenterY - 2] = 0;
+            digitGrid[7][digitCenterX][digitCenterY - 2] = 0;
+            digitGrid[7][digitCenterX + 1][digitCenterY - 2] = 1;
+            digitGrid[7][digitCenterX + 2][digitCenterY - 2] = 0;
+            
+            digitGrid[7][digitCenterX - 2][digitCenterY - 1] = 0;
+            digitGrid[7][digitCenterX - 1][digitCenterY - 1] = 0;
+            digitGrid[7][digitCenterX][digitCenterY - 1] = 0;
+            digitGrid[7][digitCenterX + 1][digitCenterY - 1] = 1;
+            digitGrid[7][digitCenterX + 2][digitCenterY - 1] = 0;
+            
+            digitGrid[7][digitCenterX - 2][digitCenterY] = 0;
+            digitGrid[7][digitCenterX - 1][digitCenterY] = 0;
+            digitGrid[7][digitCenterX][digitCenterY] = 0;
+            digitGrid[7][digitCenterX + 1][digitCenterY] = 1;
+            digitGrid[7][digitCenterX + 2][digitCenterY] = 0;
+            
+            digitGrid[7][digitCenterX - 2][digitCenterY + 1] = 0;
+            digitGrid[7][digitCenterX - 1][digitCenterY + 1] = 0;
+            digitGrid[7][digitCenterX][digitCenterY + 1] = 0;
+            digitGrid[7][digitCenterX + 1][digitCenterY + 1] = 1;
+            digitGrid[7][digitCenterX + 2][digitCenterY + 1] = 0;
+            
+            digitGrid[7][digitCenterX - 2][digitCenterY + 2] = 0;
+            digitGrid[7][digitCenterX - 1][digitCenterY + 2] = 1;
+            digitGrid[7][digitCenterX][digitCenterY + 2] = 1;
+            digitGrid[7][digitCenterX + 1][digitCenterY + 2] = 1;
+            digitGrid[7][digitCenterX + 2][digitCenterY + 2] = 0;
+            break;
+            
+        case 8:
+            // ~ 8 ~
+            
+            // 0 1 1 1 0
+            // 0 1 0 1 0
+            // 0 1 1 1 0
+            // 0 1 0 1 0
+            // 0 1 1 1 0
+            digitGrid[8][digitCenterX - 2][digitCenterY - 2] = 0;
+            digitGrid[8][digitCenterX - 1][digitCenterY - 2] = 1;
+            digitGrid[8][digitCenterX][digitCenterY - 2] = 1;
+            digitGrid[8][digitCenterX + 1][digitCenterY - 2] = 1;
+            digitGrid[8][digitCenterX + 2][digitCenterY - 2] = 0;
+            
+            digitGrid[8][digitCenterX - 2][digitCenterY - 1] = 0;
+            digitGrid[8][digitCenterX - 1][digitCenterY - 1] = 1;
+            digitGrid[8][digitCenterX][digitCenterY - 1] = 0;
+            digitGrid[8][digitCenterX + 1][digitCenterY - 1] = 1;
+            digitGrid[8][digitCenterX + 2][digitCenterY - 1] = 0;
+            
+            digitGrid[8][digitCenterX - 2][digitCenterY] = 0;
+            digitGrid[8][digitCenterX - 1][digitCenterY] = 1;
+            digitGrid[8][digitCenterX][digitCenterY] = 1;
+            digitGrid[8][digitCenterX + 1][digitCenterY] = 1;
+            digitGrid[8][digitCenterX + 2][digitCenterY] = 0;
+            
+            digitGrid[8][digitCenterX - 2][digitCenterY + 1] = 0;
+            digitGrid[8][digitCenterX - 1][digitCenterY + 1] = 1;
+            digitGrid[8][digitCenterX][digitCenterY + 1] = 0;
+            digitGrid[8][digitCenterX + 1][digitCenterY + 1] = 1;
+            digitGrid[8][digitCenterX + 2][digitCenterY + 1] = 0;
+            
+            digitGrid[8][digitCenterX - 2][digitCenterY + 2] = 0;
+            digitGrid[8][digitCenterX - 1][digitCenterY + 2] = 1;
+            digitGrid[8][digitCenterX][digitCenterY + 2] = 1;
+            digitGrid[8][digitCenterX + 1][digitCenterY + 2] = 1;
+            digitGrid[8][digitCenterX + 2][digitCenterY + 2] = 0;
+            break;
+            
+        case 9:
+            // ~ 9 ~
+            
+            // 0 1 1 1 0
+            // 0 1 0 1 0
+            // 0 1 1 1 0
+            // 0 0 0 1 0
+            // 0 0 0 1 0
+            digitGrid[9][digitCenterX - 2][digitCenterY - 2] = 0;
+            digitGrid[9][digitCenterX - 1][digitCenterY - 2] = 0;
+            digitGrid[9][digitCenterX][digitCenterY - 2] = 0;
+            digitGrid[9][digitCenterX + 1][digitCenterY - 2] = 1;
+            digitGrid[9][digitCenterX + 2][digitCenterY - 2] = 0;
+            
+            digitGrid[9][digitCenterX - 2][digitCenterY - 1] = 0;
+            digitGrid[9][digitCenterX - 1][digitCenterY - 1] = 0;
+            digitGrid[9][digitCenterX][digitCenterY - 1] = 0;
+            digitGrid[9][digitCenterX + 1][digitCenterY - 1] = 1;
+            digitGrid[9][digitCenterX + 2][digitCenterY - 1] = 0;
+            
+            digitGrid[9][digitCenterX - 2][digitCenterY] = 0;
+            digitGrid[9][digitCenterX - 1][digitCenterY] = 1;
+            digitGrid[9][digitCenterX][digitCenterY] = 1;
+            digitGrid[9][digitCenterX + 1][digitCenterY] = 1;
+            digitGrid[9][digitCenterX + 2][digitCenterY] = 0;
+            
+            digitGrid[9][digitCenterX - 2][digitCenterY + 1] = 0;
+            digitGrid[9][digitCenterX - 1][digitCenterY + 1] = 1;
+            digitGrid[9][digitCenterX][digitCenterY + 1] = 0;
+            digitGrid[9][digitCenterX + 1][digitCenterY + 1] = 1;
+            digitGrid[9][digitCenterX + 2][digitCenterY + 1] = 0;
+            
+            digitGrid[9][digitCenterX - 2][digitCenterY + 2] = 0;
+            digitGrid[9][digitCenterX - 1][digitCenterY + 2] = 1;
+            digitGrid[9][digitCenterX][digitCenterY + 2] = 1;
+            digitGrid[9][digitCenterX + 1][digitCenterY + 2] = 1;
+            digitGrid[9][digitCenterX + 2][digitCenterY + 2] = 0;
+            break;
+            
+        default:
+            cerr << "invalid digit to place: " << digit << endl;
+            break;
+    }
 }
 
 // sums a vector of values
@@ -164,277 +607,4 @@ double tGame::variance(vector<double> values)
     }
     
     return sumSqDist /= (double)values.size();
-}
-
-double tGame::mutualInformation(vector<int> A,vector<int>B)
-{
-	set<int> nrA,nrB;
-	set<int>::iterator aI,bI;
-	map<int,map<int,double> > pXY;
-	map<int,double> pX,pY;
-	int i;
-	double c=1.0/(double)A.size();
-	double I=0.0;
-	for(i=0;i<A.size();i++){
-		nrA.insert(A[i]);
-		nrB.insert(B[i]);
-		pX[A[i]]=0.0;
-		pY[B[i]]=0.0;
-	}
-	for(aI=nrA.begin();aI!=nrA.end();aI++)
-		for(bI=nrB.begin();bI!=nrB.end();bI++){
-			pXY[*aI][*bI]=0.0;
-		}
-	for(i=0;i<A.size();i++){
-		pXY[A[i]][B[i]]+=c;
-		pX[A[i]]+=c;
-		pY[B[i]]+=c;
-	}
-	for(aI=nrA.begin();aI!=nrA.end();aI++)
-		for(bI=nrB.begin();bI!=nrB.end();bI++)
-			if((pX[*aI]!=0.0)&&(pY[*bI]!=0.0)&&(pXY[*aI][*bI]!=0.0))
-				I+=pXY[*aI][*bI]*log2(pXY[*aI][*bI]/(pX[*aI]*pY[*bI]));
-	return I;
-	
-}
-
-double tGame::entropy(vector<int> list){
-	map<int, double> p;
-	map<int,double>::iterator pI;
-	int i;
-	double H=0.0;
-	double c=1.0/(double)list.size();
-	for(i=0;i<list.size();i++)
-		p[list[i]]+=c;
-	for (pI=p.begin();pI!=p.end();pI++) {
-        H+=p[pI->first]*log2(p[pI->first]);	
-	}
-	return -1.0*H;
-}
-
-double tGame::ei(vector<int> A,vector<int> B,int theMask){
-	set<int> nrA,nrB;
-	set<int>::iterator aI,bI;
-	map<int,map<int,double> > pXY;
-	map<int,double> pX,pY;
-	int i;
-	double c=1.0/(double)A.size();
-	double I=0.0;
-	for(i=0;i<A.size();i++){
-		nrA.insert(A[i]&theMask);
-		nrB.insert(B[i]&theMask);
-		pX[A[i]&theMask]=0.0;
-		pY[B[i]&theMask]=0.0;
-	}
-	for(aI=nrA.begin();aI!=nrA.end();aI++)
-		for(bI=nrB.begin();bI!=nrB.end();bI++){
-			pXY[*aI][*bI]=0.0;
-		}
-	for(i=0;i<A.size();i++){
-		pXY[A[i]&theMask][B[i]&theMask]+=c;
-		pX[A[i]&theMask]+=c;
-		pY[B[i]&theMask]+=c;
-	}
-	for(aI=nrA.begin();aI!=nrA.end();aI++)
-		for(bI=nrB.begin();bI!=nrB.end();bI++)
-			if((pX[*aI]!=0.0)&&(pY[*bI]!=0.0)&&(pXY[*aI][*bI]!=0.0))
-				I+=pXY[*aI][*bI]*log2(pXY[*aI][*bI]/(pY[*bI]));
-	return -I;
-}
-
-double tGame::computeAtomicPhi(vector<int>A,int states){
-	int i;
-	double P,EIsystem;
-	vector<int> T0,T1;
-	T0=A;
-	T1=A;
-	T0.erase(T0.begin()+T0.size()-1);
-	T1.erase(T1.begin());
-	EIsystem=ei(T0,T1,(1<<states)-1);
-	P=0.0;
-	for(i=0;i<states;i++){
-		double EIP=ei(T0,T1,1<<i);
-        //		cout<<EIP<<endl;
-		P+=EIP;
-	}
-    //	cout<<-EIsystem+P<<" "<<EIsystem<<" "<<P<<" "<<T0.size()<<" "<<T1.size()<<endl;
-	return -EIsystem+P;
-}
-
-double tGame::computeR(vector<vector<int> > table,int howFarBack){
-	double Iwh,Iws,Ish,Hh,Hs,Hw,Hhws,delta,R;
-	int i;
-	for(i=0;i<howFarBack;i++){
-		table[0].erase(table[0].begin());
-		table[1].erase(table[1].begin());
-		table[2].erase(table[2].begin()+(table[2].size()-1));
-	}
-	table[4].clear();
-	for(i=0;i<table[0].size();i++){
-		table[4].push_back((table[0][i]<<14)+(table[1][i]<<10)+table[2][i]);
-	}
-	Iwh=mutualInformation(table[0],table[2]);
-    Iws=mutualInformation(table[0],table[1]);
-    Ish=mutualInformation(table[1],table[2]);
-    Hh=entropy(table[2]);
-    Hs=entropy(table[1]);
-    Hw=entropy(table[0]);
-    Hhws=entropy(table[4]);
-    delta=Hhws+Iwh+Iws+Ish-Hh-Hs-Hw;
-    R=Iwh-delta;
-  	return R;
-}
-
-double tGame::computeOldR(vector<vector<int> > table){
-	double Ia,Ib;
-	Ia=mutualInformation(table[0], table[2]);
-	Ib=mutualInformation(table[1], table[2]);
-	return Ib-Ia;
-}
-
-double tGame::predictiveI(vector<int>A){
-	vector<int> S,I;
-	S.clear(); I.clear();
-	for(int i=0;i<A.size();i++){
-		S.push_back((A[i]>>12)&15);
-		I.push_back(A[i]&3);
-	}
-	return mutualInformation(S, I);
-}
-
-double tGame::nonPredictiveI(vector<int>A){
-	vector<int> S,I;
-	S.clear(); I.clear();
-	for(int i=0;i<A.size();i++){
-		S.push_back((A[i]>>12)&15);
-		I.push_back(A[i]&3);
-	}
-	return entropy(I)-mutualInformation(S, I);
-}
-
-double tGame::predictNextInput(vector<int>A){
-	vector<int> S,I;
-	S.clear(); I.clear();
-	for(int i=0;i<A.size();i++){
-		S.push_back((A[i]>>12)&15);
-		I.push_back(A[i]&3);
-	}
-	S.erase(S.begin());
-	I.erase(I.begin()+I.size()-1);
-	return mutualInformation(S, I);
-}
-
-int tGame::neuronsConnectedToPreyRetina(tAgent *agent){
-    tAgent *A=new tAgent;
-    int i,j,c=0;
-    A->genome=agent->genome;
-    A->setupPhenotype();
-    for(i=0;i<A->hmmus.size();i++)
-        for(j=0;j<A->hmmus[i]->ins.size();j++)
-            if(A->hmmus[i]->ins[j]<eddSensors)
-                c++;
-    delete A;
-    return c;
-}
-
-int tGame::neuronsConnectedToPredatorRetina(tAgent* agent){
-    tAgent *A=new tAgent;
-    int i,j,c=0;
-    A->genome=agent->genome;
-    A->setupPhenotype();
-    for(i=0;i<A->hmmus.size();i++)
-        for(j=0;j<A->hmmus[i]->ins.size();j++)
-            if((A->hmmus[i]->ins[j]<(eddSensors*2))&&(A->hmmus[i]->ins[j]>=eddSensors))
-                c++;
-    delete A;
-    return c;
-    
-}
-
-//** tOctuplet implementation
-void tOctuplet::loadOctuplet(FILE *f){
-    int i,IN;
-    data.clear();
-    data.resize(8);
-    for(i=0;i<8;i++){
-        fscanf(f,"  %i",&IN);
-        data[i]=IN;
-    }
-}
-
-//** tEperiment class implementations
-void tExperiment::loadExperiment(char *filename){
-    FILE *f=fopen(filename,"r+t");
-    int i,j,k;
-    fscanf(f,"%i:",&j);
-    dropSequences.resize(j);
-    for(i=0;i<dropSequences.size();i++)
-        dropSequences[i].loadOctuplet(f);
-    fscanf(f,"%i:",&j);
-    sizeSequences.resize(j);
-    for(i=0;i<sizeSequences.size();i++)
-        sizeSequences[i].loadOctuplet(f);
-    fscanf(f,"%i:",&j);
-    selfSequences.resize(j);
-    for(i=0;i<selfSequences.size();i++)
-        selfSequences[i].loadOctuplet(f);
-    shouldHit.resize(drops());
-    for(i=0;i<shouldHit.size();i++){
-        shouldHit[i].resize(sizes());
-        for(j=0;j<shouldHit[i].size();j++){
-            shouldHit[i][j].resize(selves());
-            for(k=0;k<shouldHit[i][j].size();k++){
-                int l;
-                fscanf(f,"%i\n",&l);
-                if(l==1)
-                    shouldHit[i][j][k]=true;
-                else
-                    shouldHit[i][j][k]=false;
-            }
-        }
-    }
-    fclose(f);
-}
-
-void tExperiment::showExperimentProtokoll(void){
-    int i,j,k;
-    printf("drop directions: %i\n",drops());
-    for(i=0;i<drops();i++){
-        printf("%i:",i);
-        for(j=0;j<8;j++)
-            printf("    %i",dropSequences[i].data[j]);
-        printf("\n");
-    }
-    printf("drop sizes: %i\n",sizes());
-    for(i=0;i<sizes();i++){
-        printf("%i:",i);
-        for(j=0;j<8;j++)
-            printf("    %i",sizeSequences[i].data[j]);
-        printf("\n");
-    }
-    printf("self sizes: %i\n",selves());
-    for(i=0;i<selves();i++){
-        printf("%i:",i);
-        for(j=0;j<8;j++)
-            printf("    %i",selfSequences[i].data[j]);
-        printf("\n");
-    }
-    printf("should hit\n%i means true\nD  B   S   catch\n",(int)true);
-    for(i=0;i<shouldHit.size();i++)
-        for(j=0;j<shouldHit[i].size();j++)
-            for(k=0;k<shouldHit[i][j].size();k++)
-                printf("%i  %i  %i  %i\n",i,j,k,(int)shouldHit[i][j][k]);
-}
-
-int tExperiment::drops(void){
-    return (int) dropSequences.size();
-}
-
-int tExperiment::sizes(void){
-    return (int) sizeSequences.size();
-}
-
-int tExperiment::selves(void){
-    return (int) selfSequences.size();
-    
 }
