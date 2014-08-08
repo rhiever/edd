@@ -26,9 +26,57 @@
 #include <stdio.h>
 
 // simulation-specific constants
-#define totalStepsInSimulation      2000
+#define totalStepsInSimulation      100
 
-tGame::tGame() { }
+// each sensor's (x, y) offset from the center of the camera
+map<int, vector<int>> sensorOffsetMap;
+
+tGame::tGame()
+{
+    // initialize the sensor offsets
+    // to maintain same order of inputs, start from the inside. for 7x7:
+    
+    // 43 42 41 40 39 38 37
+    // 44 21 20 19 18 17 36
+    // 45 22 7  6  5  16 35
+    // 46 23 8  0  4  15 34
+    // 47 24 1  2  3  14 33
+    // 48 9  10 11 12 13 32
+    // 25 26 27 28 29 30 31
+    
+    int offsetX = 0, offsetY = 0;
+    int offsetAmount = 0;
+    
+    for (int sensor = 0; sensor < 111 * 111; ++sensor)
+    {
+        int root = sqrt(sensor);
+        if (root % 2 == 1 && root * root == sensor)
+        {
+            ++offsetAmount;
+            offsetX = -offsetAmount;
+            offsetY = -offsetAmount;
+        }
+        else if (offsetX != offsetAmount && offsetY == -offsetAmount)
+        {
+            ++offsetX;
+        }
+        else if (offsetX == offsetAmount && offsetY != offsetAmount)
+        {
+            ++offsetY;
+        }
+        else if (offsetX != -offsetAmount && offsetY == offsetAmount)
+        {
+            --offsetX;
+        }
+        else if (offsetX == -offsetAmount && offsetY != -offsetAmount)
+        {
+            --offsetY;
+        }
+        
+        vector<int> offsets = {offsetX, offsetY};
+        sensorOffsetMap[sensor] = offsets;
+    }
+}
 
 tGame::~tGame() { }
 
@@ -72,8 +120,8 @@ string tGame::executeGame(tAgent* eddAgent, FILE *dataFile, bool report, int gri
         }
     }
     
-    /* // visualize the digits
-    for (int digit = 0; digit < 10; ++digit)
+    // visualize the digits
+    /*for (int digit = 0; digit < 10; ++digit)
     {
         cout << digit << endl;
         
@@ -88,8 +136,13 @@ string tGame::executeGame(tAgent* eddAgent, FILE *dataFile, bool report, int gri
         cout << "---" << endl;
     }*/
     
-    // LOD data variables
-    double eddFitness = 0.0;
+    // edd agent camera variables
+    int cameraX = 0, cameraY = 0;
+    int cameraSize = 3;
+    
+    // edd agent classification accuracy variables
+    int falsePositives = 0, truePositives = 0;
+    int falseNegatives = 0, trueNegatives = 0;
     
     // set up brain for EDD agent
     eddAgent->setupPhenotype();
@@ -97,69 +150,144 @@ string tGame::executeGame(tAgent* eddAgent, FILE *dataFile, bool report, int gri
     
     /*       BEGINNING OF SIMULATION LOOP       */
     
-    for(int step = 0; step < totalStepsInSimulation; ++step)
+    // test the edd agent on all 10 digits (0-9)
+    for (int digit = 0; digit < 10; ++digit)
     {
+        eddAgent->resetBrain();
+        cameraX = gridSizeX / 2.0;
+        cameraY = gridSizeY / 2.0;
+        cameraSize = 3;
         
-        /*       CREATE THE REPORT STRING FOR THE VIDEO       */
-        if(report)
-        {
-            // report X, Y, angle of EDD agent
-            /*char text[1000];
-            sprintf(text,"%f,%f,%f,%d,%d,%d=", predX, predY, predA, 255, 0, 0);
-            reportString.append(text);
-            reportString.append("N");*/
-            
-        }
-        /*       END OF REPORT STRING CREATION       */
-        
-        
-        /*       SAVE DATA FOR THE LOD FILE       */
-        if(dataFile != NULL)
+        for (int step = 0; step < totalStepsInSimulation; ++step)
         {
             
-        }
-        /*       END OF DATA GATHERING       */
-        
-        
-        // put sensory values in edd agent's retina
-        
-        
-        // activate the edd agent's brains
-        eddAgent->updateStates();
-        
-        // get edd agent's action
-        int action = ((eddAgent->states[(maxNodes - 1)] & 1) << 1) + (eddAgent->states[(maxNodes - 2)] & 1);
+            /*       CREATE THE REPORT STRING FOR THE VIDEO       */
+            if (report)
+            {
+                // report X, Y, angle of EDD agent
+                /*char text[1000];
+                 sprintf(text,"%f,%f,%f,%d,%d,%d=", predX, predY, predA, 255, 0, 0);
+                 reportString.append(text);
+                 reportString.append("N");*/
                 
-        switch(action)
-        {
-                // do nothing
-            case 0:
-                break;
+            }
+            /*       END OF REPORT STRING CREATION       */
+            
+            
+            /*       SAVE DATA FOR THE LOD FILE       */
+            if (dataFile != NULL)
+            {
                 
-                //
-            case 1:
-                break;
+            }
+            /*       END OF DATA GATHERING       */
+            
+            // clear all sensors
+            for (int sensor = 0; sensor < pow(min(gridSizeX, gridSizeY), 2.0); ++sensor)
+            {
+                eddAgent->states[sensor] = 0;
+            }
+            
+            // put sensory values in edd agent's retina
+            // by default, edd agent has 3x3 retina:
+            
+            // x x x
+            // x x x
+            // x x x
+            
+            // can zoom out to 5x5, 7x7, etc.
+            
+            // to maintain same order of inputs, start from the inside. for 7x7:
+            
+            // 43 42 41 40 39 38 37
+            // 44 21 20 19 18 17 36
+            // 45 22 7  6  5  16 35
+            // 46 23 8  0  4  15 34
+            // 47 24 1  2  3  14 33
+            // 48 9  10 11 12 13 32
+            // 25 26 27 28 29 30 31
+            
+            for (int sensor = 0; sensor < cameraSize * cameraSize; ++sensor)
+            {
+                int sensorX = cameraX + sensorOffsetMap[sensor][0];
+                int sensorY = cameraY + sensorOffsetMap[sensor][1];
                 
-                //
-            case 2:
-                break;
+                if (sensorX >= 0 && sensorX < gridSizeX && sensorY >= 0 && sensorY < gridSizeY)
+                {
+                    eddAgent->states[sensor] = digitGrid[digit][sensorX][sensorY];
+                }
+            }
+            
+            // activate the edd agent's brain
+            eddAgent->updateStates();
+            
+            // get edd agent's action
+            // possible actions:
+            //      move up/down: 2
+            //      move left/right: 2
+            //      zoom in: 1
+            //      zoom out: 1
+            //      classify (0-9): 10
+            //      veto bits (0-9): 10
+            
+            int moveUp = eddAgent->states[(maxNodes - 1)] & 1;
+            int moveDown = eddAgent->states[(maxNodes - 2)] & 1;
+            int moveLeft = eddAgent->states[(maxNodes - 3)] & 1;
+            int moveRight = eddAgent->states[(maxNodes - 4)] & 1;
+            int zoomIn = eddAgent->states[(maxNodes - 5)] & 1;
+            int zoomOut = eddAgent->states[(maxNodes - 6)] & 1;
+            
+            int classifyDigit[10];
+            for (int i = 0; i < 10; ++i)
+            {
+                classifyDigit[i] = eddAgent->states[(maxNodes - 7 - i)] & 1;
+            }
+            
+            int vetoBits[10];
+            for (int i = 0; i < 10; ++i)
+            {
+                vetoBits[i] = eddAgent->states[(maxNodes - 17 - i)] & 1;
+            }
+            
+            // edd agent can move the camera
+            // possible for up/down and left/right actuators to cancel each other out
+            if (moveUp) cameraY += 1;
+            if (moveDown) cameraY -= 1;
+            if (moveRight) cameraY += 1;
+            if (moveLeft) cameraX -= 1;
+            
+            // zoom the camera in and out
+            // minimum camera size = 1
+            if (zoomingCamera && zoomIn && cameraSize > 1)
+            {
+                cameraSize -= 2;
+            }
+            
+            // maximum camera size is limited by size of digit grid
+            if (zoomingCamera && zoomOut && cameraSize + 2 <= gridSizeX && cameraSize + 2 <= gridSizeY)
+            {
+                cameraSize += 2;
+            }
+            
+            for (int i = 0; i < 10; ++i)
+            {
+                bool guessedThisDigit = (classifyDigit[i] == 1 && vetoBits[i] == 0);
                 
-                //
-            case 3:
-                break;
-                
-            default:
-                break;
+                if (guessedThisDigit && i == digit) ++truePositives;
+                if (guessedThisDigit && i != digit) ++falsePositives;
+                if (!guessedThisDigit && i == digit) ++falseNegatives;
+                if (!guessedThisDigit && i != digit) ++trueNegatives;
+            }
         }
     }
+    
     /*       END OF SIMULATION LOOP       */
     
-    // compute overall fitness
-    eddAgent->fitness = eddFitness;
+    // compute overall fitness (= accuracy of classifications)
+    eddAgent->fitness = ((float)(truePositives + trueNegatives)) / (truePositives + trueNegatives + falsePositives + falseNegatives);
     
-    if(eddAgent->fitness <= 0.0)
+    if (eddAgent->fitness <= 0.0)
     {
-        eddAgent->fitness = 1.0;
+        eddAgent->fitness = 1.0e-50;
     }
     
     // output to data file, if provided
@@ -171,7 +299,6 @@ string tGame::executeGame(tAgent* eddAgent, FILE *dataFile, bool report, int gri
                 );
     }
     
-    exit(0);
     return reportString;
 }
 

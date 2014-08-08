@@ -400,7 +400,7 @@ int main(int argc, char *argv[])
         
         eddAvgFitness /= (double)populationSize;
 		
-		cout << "generation " << update << ": edd [" << (int)eddAvgFitness << " : " << (int)eddMaxFitness << "]" << endl;
+		cout << "generation " << update << ": edd [" << eddAvgFitness << " : " << eddMaxFitness << "]" << endl;
         
         // display video of simulation
         if (make_interval_video)
