@@ -116,7 +116,7 @@ void tAgent::ampUpStartCodons(void)
 	int i,j;
 	for(i=0;i<genome.size();i++)
 		genome[i]=rand()&255;
-	for(i=0;i<4;i++)
+	for(i=0;i<20;i++)
 	{
 		j=rand()%((int)genome.size()-100);
 		genome[j]=42;
@@ -153,7 +153,7 @@ void tAgent::inherit(tAgent *from, double mutationRate, int theTime, bool evolve
     
     if (mutationRate != 0.0)
     {
-        if ( (randDouble < 0.05) && (genome.size() < 20000) )
+        if ( (randDouble < 0.05) && (genome.size() < 50000) )
         {
             //duplication
             w=15+rand()&511;

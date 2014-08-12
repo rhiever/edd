@@ -352,7 +352,7 @@ int main(int argc, char *argv[])
     // seed the agents
     delete eddAgent;
     eddAgent = new tAgent;
-    eddAgent->setupRandomAgent(5000);
+    eddAgent->setupRandomAgent(10000);
     //eddAgent->loadAgent("startAgent.genome");
     
     // make mutated copies of the start genome to fill up the initial population
@@ -400,7 +400,7 @@ int main(int argc, char *argv[])
         
         eddAvgFitness /= (double)populationSize;
 		
-		cout << "generation " << update << ": edd [" << eddAvgFitness << " : " << eddMaxFitness << "]" << endl;
+		cout << "gen " << update << ": edd [" << eddAvgFitness << " : " << eddMaxFitness << "] [genome: " << bestEddAgent->genome.size() << "] [gates: " << bestEddAgent->hmmus.size() << "]" << endl;
         
         // display video of simulation
         if (make_interval_video)
@@ -464,15 +464,16 @@ int main(int argc, char *argv[])
 	}
 	
     // save the genome file of the lmrca
-	eddAgents[0]->ancestor->ancestor->saveGenome(eddGenomeFileName.c_str());
+	//eddAgents[0]->ancestor->ancestor->saveGenome(eddGenomeFileName.c_str());
     
     // save video and quantitative stats on the best swarm agent's LOD
     vector<tAgent*> saveLOD;
     
     cout << "building ancestor list" << endl;
     
+    
     // use 2 ancestors down from current population because that ancestor is highly likely to have high fitness
-    tAgent* curAncestor = eddAgents[0]->ancestor->ancestor;
+    tAgent* curAncestor = eddAgents[0];//->ancestor->ancestor;
     
     while (curAncestor != NULL)
     {
