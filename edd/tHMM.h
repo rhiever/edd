@@ -43,7 +43,7 @@ public:
 	tHMMU();
 	~tHMMU();
 	void setup(vector<unsigned char> &genome, int start);
-	void setupQuick(vector<unsigned char> &genome, int start);
+	void setupDeterministic(vector<unsigned char> &genome, int start);
 	void update(unsigned char *states,unsigned char *newStates);
 	void show(void);
 	

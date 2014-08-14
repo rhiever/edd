@@ -210,7 +210,7 @@ int main(int argc, char *argv[])
         }
         
         // -zc: allow the edd agent to use a zooming camera
-        else if (strcmp(argv[i], "-gs") == 0)
+        else if (strcmp(argv[i], "-zc") == 0)
         {
             zoomingCamera = true;
         }
@@ -345,7 +345,7 @@ int main(int argc, char *argv[])
     
     if (make_dot_edd)
     {
-        eddAgent->saveToDot(eddDotFileName.c_str(), false);
+        eddAgent->saveToDot(eddDotFileName.c_str());
         exit(0);
     }
     
@@ -441,8 +441,7 @@ int main(int argc, char *argv[])
         
 		for(int i = 0; i < populationSize; ++i)
         {
-            // retire and replace the swarm agents from the previous generation
-			eddAgents[i]->retire();
+            // replace the edd agents from the previous generation
 			eddAgents[i]->nrPointingAtMe--;
 			if(eddAgents[i]->nrPointingAtMe == 0)
             {

@@ -40,50 +40,29 @@ class tAgent{
 public:
 	vector<tHMMU*> hmmus;
 	vector<unsigned char> genome;
-	vector<tDot> dots;
-#ifdef useANN
-	tANN *ANN;
-#endif
 	
 	tAgent *ancestor;
 	unsigned int nrPointingAtMe;
-	unsigned char states[maxNodes],newStates[maxNodes];
-	double fitness,convFitness;
+	unsigned char states[maxNodes], newStates[maxNodes];
+	double fitness;
 	vector<double> fitnesses;
-	
-	double xPos,yPos,direction;
-	double sX,sY;
-	bool foodAlreadyFound;
-	int steps,bestSteps,totalSteps;
-	int ID,nrOfOffspring;
-	bool saved;
-	bool retired;
+
+	int ID, nrOfOffspring;
 	int born;
-	int correct,incorrect;
 	
 	tAgent();
 	~tAgent();
 	void setupRandomAgent(int nucleotides);
 	void loadAgent(char* filename);
-	void loadAgentWithTrailer(char* filename);
 	void setupPhenotype(void);
-    void setupMegaPhenotype(int howMany);
 	void inherit(tAgent *from,double mutationRate,int theTime, bool evolveRetina);
-	unsigned char * getStatesPointer(void);
 	void updateStates(void);
 	void resetBrain(void);
 	void ampUpStartCodons(void);
 	void showBrain(void);
 	void showPhenotype(void);
-	void saveToDot(const char *filename, bool predator);
-	void saveToDotFullLayout(char *filename);
-	
+	void saveToDot(const char *filename);
 	void initialize(int x, int y, int d);
-	tAgent* findLMRCA(void);
-	void saveFromLMRCAtoNULL(FILE *statsFile,FILE *genomeFile);
-	//void saveLOD(FILE *statsFile,FILE *genomeFile);
-	void retire(void);
-	void setupDots(int x, int y,double spacing);
 	void saveLogicTable(const char *filename);
 	void saveGenome(const char *filename);
 };

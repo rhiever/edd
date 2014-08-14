@@ -149,6 +149,14 @@ string tGame::executeGame(tAgent* eddAgent, FILE *dataFile, bool report, int gri
     int truePositives[10], falsePositives[10];
     int trueNegatives[10], falseNegatives[10];
     
+    for (int digit = 0; digit < 10; ++digit)
+    {
+        truePositives[digit] = 0;
+        falsePositives[digit] = 0;
+        trueNegatives[digit] = 0;
+        falseNegatives[digit] = 0;
+    }
+    
     /*       BEGINNING OF SIMULATION LOOP       */
     
     // test the edd agent on all 10 digits (0-9)
@@ -220,7 +228,10 @@ string tGame::executeGame(tAgent* eddAgent, FILE *dataFile, bool report, int gri
             }
             
             // activate the edd agent's brain
-            eddAgent->updateStates();
+            for (int i = 0; i < 1; ++i)
+            {
+                eddAgent->updateStates();
+            }
             
             // get edd agent's action
             // possible actions:
@@ -230,6 +241,7 @@ string tGame::executeGame(tAgent* eddAgent, FILE *dataFile, bool report, int gri
             //      zoom out: 1
             //      classify (0-9): 10
             //      veto bits (0-9): 10
+            //      TODO: "I'm ready" bit: 1
             
             int moveUp = eddAgent->states[(maxNodes - 1)] & 1;
             int moveDown = eddAgent->states[(maxNodes - 2)] & 1;
@@ -255,7 +267,7 @@ string tGame::executeGame(tAgent* eddAgent, FILE *dataFile, bool report, int gri
             /*if (moveUp) cameraY += 1;
             if (moveDown) cameraY -= 1;
             if (moveRight) cameraY += 1;
-            if (moveLeft) cameraX -= 1;*/
+            if (moveLeft) cameraX -= 1;
             
             // zoom the camera in and out
             // minimum camera size = 1
@@ -268,7 +280,7 @@ string tGame::executeGame(tAgent* eddAgent, FILE *dataFile, bool report, int gri
             if (zoomingCamera && zoomOut && cameraSize + 2 <= gridSizeX && cameraSize + 2 <= gridSizeY)
             {
                 cameraSize += 2;
-            }
+            }*/
             
             // check accuracy of edd agent classification
             //float score = 0.0;
@@ -317,12 +329,13 @@ string tGame::executeGame(tAgent* eddAgent, FILE *dataFile, bool report, int gri
     
     // compute overall fitness
     // fitness = TPR for all digits + TNR for all digits + connected to each digit's output state
-    float TPRfitness = 0.0, TNRfitness = 0.0, connectedFitness = 0.0;
     
     for (int digit = 0; digit < 10; ++digit)
     {
-        TPRfitness += truePositives[digit] / (truePositives[digit] + falseNegatives[digit]);
-        TNRfitness += trueNegatives[digit] / (trueNegatives[digit] + falsePositives[digit]);
+        float TPRfitness = 0.0, TNRfitness = 0.0, connectedFitness = 0.0;
+        
+        TPRfitness = truePositives[digit] / (truePositives[digit] + falseNegatives[digit]);
+        TNRfitness = trueNegatives[digit] / (trueNegatives[digit] + falsePositives[digit]);
         
         // reward extra fitness for just connecting to the current digit's output state
         bool connectedToOutput = false;
@@ -338,12 +351,21 @@ string tGame::executeGame(tAgent* eddAgent, FILE *dataFile, bool report, int gri
             }
         }
         
-        if (connectedToOutput) connectedFitness += 1.0;
+        if (connectedToOutput) connectedFitness = 1.0;
+        
+        eddAgent->fitness += pow(TPRfitness + TNRfitness + connectedFitness, 2.0);
     }
     
-    eddAgent->fitness = TPRfitness + TNRfitness + connectedFitness;
+    //if (eddAgent->fitness >= 20) cout << TPRfitness << " " << TNRfitness << " " << connectedFitness << endl;
     
-    if (eddAgent->fitness > 10) cout << TPRfitness << " " << TNRfitness << " " << connectedFitness << endl;
+    /*if (eddAgent->fitness >= 20)
+    {
+        for (int hmg = 0; hmg < eddAgent->hmmus.size(); ++hmg)
+        {
+            cout << eddAgent->hmmus[hmg]->ins.size() << endl;
+        }
+        exit(0);
+    }*/
     
     // don't allow fitness to be 0 nor negative
     if (eddAgent->fitness <= 0.0)
@@ -374,42 +396,6 @@ void tGame::placeDigit(vector<vector<vector<int>>> &digitGrid, int digit, int di
         }
     }
     
-    switch (digit)
-    {
-        case 0:
-            digitGrid[0][digitCenterX - 2][digitCenterY - 2] = 1;
-            break;
-        case 1:
-            digitGrid[1][digitCenterX - 1][digitCenterY - 2] = 1;
-            break;
-        case 2:
-            digitGrid[2][digitCenterX - 0][digitCenterY - 2] = 1;
-            break;
-        case 3:
-            digitGrid[3][digitCenterX + 1][digitCenterY - 2] = 1;
-            break;
-        case 4:
-            digitGrid[4][digitCenterX + 2][digitCenterY - 2] = 1;
-            break;
-        case 5:
-            digitGrid[5][digitCenterX - 2][digitCenterY - 1] = 1;
-            break;
-        case 6:
-            digitGrid[6][digitCenterX - 1][digitCenterY - 1] = 1;
-            break;
-        case 7:
-            digitGrid[7][digitCenterX - 0][digitCenterY - 1] = 1;
-            break;
-        case 8:
-            digitGrid[8][digitCenterX + 1][digitCenterY - 1] = 1;
-            break;
-        case 9:
-            digitGrid[9][digitCenterX + 2][digitCenterY - 1] = 1;
-            break;
-        default:
-            break;
-    }
-    return;
     switch (digit)
     {
         case 0:

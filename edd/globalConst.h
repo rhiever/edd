@@ -24,6 +24,6 @@
 
 #define     cPI             3.14159265
 #define     randDouble      ((double)rand() / (double)RAND_MAX)
-#define     maxNodes        128
+#define     maxNodes        64
 
 #endif

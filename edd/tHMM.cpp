@@ -38,6 +38,8 @@ tHMMU::~tHMMU(){
 	chosenOutPos.clear();
 	chosenOutNeg.clear();
 }
+
+// set up stochastic gate
 void tHMMU::setup(vector<unsigned char> &genome, int start){
 	int i,j,k;
 	ins.clear();
@@ -82,7 +84,8 @@ void tHMMU::setup(vector<unsigned char> &genome, int start){
 	}
 }
 
-void tHMMU::setupQuick(vector<unsigned char> &genome, int start){
+// set up deterministic gate
+void tHMMU::setupDeterministic(vector<unsigned char> &genome, int start){
 	int i,j,k;
 	ins.clear();
 	outs.clear();
@@ -115,12 +118,24 @@ void tHMMU::setupQuick(vector<unsigned char> &genome, int start){
 	k=k+16;
 	hmm.resize(1<<_yDim);
 	sums.resize(1<<_yDim);
-	for(i=0;i<(1<<_yDim);i++){
+	for(i=0;i<(1<<_yDim);i++)
+    {
 		hmm[i].resize(1<<_xDim);
+        int largestValueInRow = 0, largestValueInRowIndex = 0;
+        
 		for(j=0;j<(1<<_xDim);j++)
+        {
 			hmm[i][j]=0;
-		hmm[i][genome[(k+j+((1<<_xDim)*i))%genome.size()]&((1<<_xDim)-1)]=255;
-		sums[i]=255;
+            
+            if (genome[(k + j + ((1 << _xDim) * i)) % genome.size()] > largestValueInRow)
+            {
+                largestValueInRow = genome[(k+j+((1<<_xDim)*i))%genome.size()];
+                largestValueInRowIndex = j;
+            }
+        }
+        
+		hmm[i][largestValueInRowIndex] = 255;
+		sums[i] = 255;
 	}
 	
 }
