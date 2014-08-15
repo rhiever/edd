@@ -42,7 +42,7 @@ using namespace std;
 
 //double  replacementRate             = 0.1;
 double  perSiteMutationRate         = 0.005;
-int     populationSize              = 100;
+int     populationSize              = 200;
 int     totalGenerations            = 252;
 tGame   *game                       = NULL;
 
@@ -382,6 +382,7 @@ int main(int argc, char *argv[])
         // determine fitness of population
 		eddMaxFitness = 0.0;
         double eddAvgFitness = 0.0;
+        int eddMaxIndex = 0;
         
 		for(int i = 0; i < populationSize; ++i)
         {
@@ -395,12 +396,16 @@ int main(int argc, char *argv[])
             {
                 eddMaxFitness = eddAgents[i]->fitness;
                 bestEddAgent = eddAgents[i];
+                eddMaxIndex = i;
             }
 		}
         
         eddAvgFitness /= (double)populationSize;
 		
-		cout << "gen " << update << ": edd [" << eddAvgFitness << " : " << eddMaxFitness << "] [genome: " << bestEddAgent->genome.size() << "] [gates: " << bestEddAgent->hmmus.size() << "]" << endl;
+        if (update % 100 == 0)
+        {
+            cout << "gen " << update << ": edd [" << eddAvgFitness << " : " << eddMaxFitness << "] [genome: " << bestEddAgent->genome.size() << "] [gates: " << bestEddAgent->hmmus.size() << "]" << endl;
+        }
         
         // display video of simulation
         if (make_interval_video)
@@ -430,9 +435,19 @@ int main(int argc, char *argv[])
 			do
             {
                 j = rand() % populationSize;
-            } while((j == i) || (randDouble > (eddAgents[j]->fitness / eddMaxFitness)));
+            } while((j == i) ||
+                    (randDouble > (eddAgents[j]->fitness / eddMaxFitness)));
             
-			offspring->inherit(eddAgents[j], perSiteMutationRate, update, false);
+            if (i == eddMaxIndex)
+            {
+                // elite selection
+                offspring->inherit(eddAgents[i], 0.0, update, false);
+            }
+            else
+            {
+                offspring->inherit(eddAgents[j], perSiteMutationRate, update, false);
+            }
+			
 			EANextGen[i] = offspring;
 		}
         

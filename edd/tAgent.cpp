@@ -101,9 +101,9 @@ void tAgent::inherit(tAgent *from, double mutationRate, int theTime, bool evolve
 	//double localMutationRate=4.0/from->genome.size();
 	vector<unsigned char> buffer;
 	born=theTime;
-	ancestor=from;
-	from->nrPointingAtMe++;
-	from->nrOfOffspring++;
+	//ancestor=from;
+	//from->nrPointingAtMe++;
+	//from->nrOfOffspring++;
 	genome.clear();
 	genome.resize(from->genome.size());
     
@@ -121,7 +121,7 @@ void tAgent::inherit(tAgent *from, double mutationRate, int theTime, bool evolve
     
     if (mutationRate != 0.0)
     {
-        if ( (randDouble < 0.05) && (genome.size() < 50000) )
+        if ( (randDouble < 0.05) && (genome.size() < 10000) )
         {
             //duplication
             w=15+rand()&511;
