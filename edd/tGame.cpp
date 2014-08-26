@@ -27,7 +27,7 @@
 #include <algorithm>
 
 // simulation-specific constants
-#define totalStepsInSimulation      1
+#define totalStepsInSimulation      20
 
 // each sensor's (x, y) offset from the center of the camera
 map< int, vector<int> > sensorOffsetMap;
@@ -109,20 +109,30 @@ string tGame::executeGame(tAgent* eddAgent, FILE *dataFile, bool report, int gri
     
     // if the digits are being randomly placed, place all 10 digits (0-9)
     // in random spots on the grid at the beginning of every simulation
-    if (randomPlacement)
-    {
-        cerr << "random placement not yet implemented" << endl;
-        exit(0);
-    }
     // otherwise, place all 10 digits (0-9) centered in the grid
-    else
+    for (int digit = 0; digit < 10; ++digit)
     {
         int digitCenterX = (int)(gridSizeX / 2.0), digitCenterY = (int)(gridSizeY / 2.0);
         
-        for (int digit = 0; digit < 10; ++digit)
+        if (randomPlacement)
         {
-            placeDigit(digitGrid, digit, digitCenterX, digitCenterY);
+            bool validPlacement = false;
+            
+            while (!validPlacement)
+            {
+                digitCenterX = randDouble * gridSizeX;
+                digitCenterY = randDouble * gridSizeY;
+                
+                if (digitCenterX - 2 >= 0 && digitCenterX + 2 < gridSizeX &&
+                    digitCenterY - 2 >= 0 && digitCenterY + 2 < gridSizeY)
+                {
+                    validPlacement = true;
+                }
+            }
+
         }
+        
+        placeDigit(digitGrid, digit, digitCenterX, digitCenterY);
     }
     
     // set up brain for EDD agent

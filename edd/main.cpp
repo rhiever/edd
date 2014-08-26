@@ -403,12 +403,19 @@ int main(int argc, char *argv[])
             if(eddAgents[i]->classificationFitness > eddMaxFitness)
             {
                 eddMaxFitness = eddAgents[i]->classificationFitness;
-                bestEddAgent = eddAgents[i];
                 eddMaxIndex = i;
             }
 		}
         
         eddAvgFitness /= (double)populationSize;
+        
+        // make a copy of the best agent
+        if (bestEddAgent != NULL)
+        {
+            delete bestEddAgent;
+        }
+        bestEddAgent = new tAgent;
+        bestEddAgent->inherit(eddAgents[eddMaxIndex], 0.0, update, false);
 		
         if (update % 100 == 0)
         {
@@ -483,17 +490,16 @@ int main(int argc, char *argv[])
         }
 	}
 	
-    // save the genome file of the lmrca
-	//eddAgents[0]->ancestor->ancestor->saveGenome(eddGenomeFileName.c_str());
+    // save the genome file of the best agent
+	bestEddAgent->saveGenome(eddGenomeFileName.c_str());
     
     // save video and quantitative stats on the best swarm agent's LOD
     vector<tAgent*> saveLOD;
     
     cout << "building ancestor list" << endl;
     
-    
     // use 2 ancestors down from current population because that ancestor is highly likely to have high fitness
-    tAgent* curAncestor = eddAgents[0];//->ancestor->ancestor;
+    tAgent* curAncestor = bestEddAgent;
     
     while (curAncestor != NULL)
     {
