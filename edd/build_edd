@@ -1,5 +1,5 @@
 echo "building edd..."
 
-g++ -o edd -O3 globalConst.h helper.cpp helper.h main.cpp tAgent.cpp tAgent.h tGame.cpp tGame.h tHMM.cpp tHMM.h
+g++ -o edd -O3 globalConst.h main.cpp tAgent.cpp tAgent.h tGame.cpp tGame.h tHMM.cpp tHMM.h
 
 echo "build complete!"

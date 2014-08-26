@@ -44,8 +44,13 @@ public:
 	tAgent *ancestor;
 	unsigned int nrPointingAtMe;
 	unsigned char states[maxNodes], newStates[maxNodes];
-	double fitness;
+	double fitness, classificationFitness;
 	vector<double> fitnesses;
+    
+    // correct/incorrect guesses for each digit
+    int truePositives[10], falsePositives[10];
+    int trueNegatives[10], falseNegatives[10];
+    float truePositiveRate[10], trueNegativeRate[10];
 
 	int ID, nrOfOffspring;
 	int born;

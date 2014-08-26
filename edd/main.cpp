@@ -40,9 +40,8 @@ string  findBestRun(tAgent *eddAgent);
 
 using namespace std;
 
-//double  replacementRate             = 0.1;
 double  perSiteMutationRate         = 0.005;
-int     populationSize              = 200;
+int     populationSize              = 100;
 int     totalGenerations            = 252;
 tGame   *game                       = NULL;
 
@@ -117,6 +116,8 @@ int main(int argc, char *argv[])
         {
             ++i;
             srand(atoi(argv[i]));
+            
+            cout << "random seed set to " << atoi(argv[i]) << endl;
         }
         
         // -g [int]: set generations
@@ -132,6 +133,8 @@ int main(int argc, char *argv[])
                 cerr << "minimum number of generations permitted is 3." << endl;
                 exit(0);
             }
+            
+            cout << "generations set to " << totalGenerations - 2 << endl;
         }
         
         // -t [int]: track best brains
@@ -207,11 +210,14 @@ int main(int argc, char *argv[])
                 cerr << "minimum grid size dimension is 5." << endl;
                 exit(0);
             }
+            
+            cout << "grid size set to: (" << gridSizeX << ", " << gridSizeY << ")" << endl;
         }
         
         // -zc: allow the edd agent to use a zooming camera
         else if (strcmp(argv[i], "-zc") == 0)
         {
+            cout << "zooming camera enabled" << endl;
             zoomingCamera = true;
         }
         
@@ -219,6 +225,7 @@ int main(int argc, char *argv[])
         // the digits are always centered
         else if (strcmp(argv[i], "-rp") == 0)
         {
+            cout << "random placement of digits enabled" << endl;
             randomPlacement = true;
         }
         
@@ -229,6 +236,7 @@ int main(int argc, char *argv[])
             noise = true;
             ++i;
             noiseAmount = atof(argv[i]);
+            cout << "noise enabled with probability: " << noiseAmount << endl;
         }
     }
     
@@ -384,17 +392,17 @@ int main(int argc, char *argv[])
         double eddAvgFitness = 0.0;
         int eddMaxIndex = 0;
         
-		for(int i = 0; i < populationSize; ++i)
+		for (int i = 0; i < populationSize; ++i)
         {
             game->executeGame(eddAgents[i], NULL, false, gridSizeX, gridSizeY, zoomingCamera, randomPlacement, noise, noiseAmount);
             
-            eddAvgFitness += eddAgents[i]->fitness;
+            eddAvgFitness += eddAgents[i]->classificationFitness;
             
             //eddAgents[i]->fitnesses.push_back(eddAgents[i]->fitness);
             
-            if(eddAgents[i]->fitness > eddMaxFitness)
+            if(eddAgents[i]->classificationFitness > eddMaxFitness)
             {
-                eddMaxFitness = eddAgents[i]->fitness;
+                eddMaxFitness = eddAgents[i]->classificationFitness;
                 bestEddAgent = eddAgents[i];
                 eddMaxIndex = i;
             }
@@ -425,30 +433,28 @@ int main(int argc, char *argv[])
             }
         }
         
+        // randomly shuffle the agents
+        random_shuffle(eddAgents.begin(), eddAgents.end());
         
-		for(int i = 0; i < populationSize; ++i)
+		for(int i = 0; i < populationSize; i += 2)
 		{
             // construct swarm agent population for the next generation
-			tAgent *offspring = new tAgent;
-            int j = 0;
+			tAgent *offspring1 = new tAgent;
+            tAgent *offspring2 = new tAgent;
             
-			do
+            if (eddAgents[i]->fitness > eddAgents[i + 1]->fitness)
             {
-                j = rand() % populationSize;
-            } while((j == i) ||
-                    (randDouble > (eddAgents[j]->fitness / eddMaxFitness)));
-            
-            if (i == eddMaxIndex)
-            {
-                // elite selection
-                offspring->inherit(eddAgents[i], 0.0, update, false);
+                offspring1->inherit(eddAgents[i], 0.0, update, false);
+                offspring2->inherit(eddAgents[i], perSiteMutationRate, update, false);
             }
             else
             {
-                offspring->inherit(eddAgents[j], perSiteMutationRate, update, false);
+                offspring1->inherit(eddAgents[i + 1], 0.0, update, false);
+                offspring2->inherit(eddAgents[i + 1], perSiteMutationRate, update, false);
             }
 			
-			EANextGen[i] = offspring;
+			EANextGen[i] = offspring1;
+            EANextGen[i + 1] = offspring2;
 		}
         
         // shuffle the populations so there is a minimal chance of the same predator/prey combo in the next generation
