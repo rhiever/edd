@@ -259,18 +259,6 @@ string tGame::executeGame(tAgent* eddAgent, FILE *dataFile, bool report, int gri
             int zoomIn = eddAgent->states[(maxNodes - 5)] & 1;
             int zoomOut = eddAgent->states[(maxNodes - 6)] & 1;
             
-            int classifyDigit[10];
-            for (int i = 0; i < 10; ++i)
-            {
-                classifyDigit[i] = eddAgent->states[(maxNodes - 7 - i)] & 1;
-            }
-            
-            int vetoBits[10];
-            for (int i = 0; i < 10; ++i)
-            {
-                vetoBits[i] = eddAgent->states[(maxNodes - 17 - i)] & 1;
-            }
-            
             // edd agent can move the camera
             // possible for up/down and left/right actuators to cancel each other out
             if (zoomingCamera && moveUp) cameraY += 1;
@@ -290,50 +278,63 @@ string tGame::executeGame(tAgent* eddAgent, FILE *dataFile, bool report, int gri
             {
                 cameraSize += 2;
             }
+        }
+        
+        // parse edd agent classifications
+        int classifyDigit[10];
+        for (int i = 0; i < 10; ++i)
+        {
+            classifyDigit[i] = eddAgent->states[(maxNodes - 7 - i)] & 1;
+        }
+        
+        int vetoBits[10];
+        for (int i = 0; i < 10; ++i)
+        {
+            vetoBits[i] = eddAgent->states[(maxNodes - 17 - i)] & 1;
+        }
+        
+        // check accuracy of edd agent classifications
+        float score = 0.0;
+        float numDigitsGuessed = 0.0;
+        
+        for (int i = 0; i < 10; ++i)
+        {
+            bool guessedThisDigit = (classifyDigit[i] == 1 && vetoBits[i] == 0);
             
-            // check accuracy of edd agent classification
-            float score = 0.0;
-            float numDigitsGuessed = 0.0;
-            
-            for (int i = 0; i < 10; ++i)
+            if (guessedThisDigit)
             {
-                bool guessedThisDigit = (classifyDigit[i] == 1 && vetoBits[i] == 0);
-                
-                if (guessedThisDigit)
-                {
-                    numDigitsGuessed += 1.0;
-                }
-                
-                if (guessedThisDigit && i == digit)
-                {
-                    // true positive
-                    eddAgent->truePositives[i] += 1;
-                    score = 1.0;
-                }
-                
-                else if (guessedThisDigit && i != digit)
-                {
-                    // false positive
-                    eddAgent->falsePositives[i] += 1;
-                }
-                
-                else if (!guessedThisDigit && i == digit)
-                {
-                    // false negative
-                    eddAgent->falseNegatives[i] += 1;
-                }
-                
-                else if (!guessedThisDigit && i != digit)
-                {
-                    // true negative
-                    eddAgent->trueNegatives[i] += 1;
-                }
+                numDigitsGuessed += 1.0;
             }
             
-            if (numDigitsGuessed > 0.0)
+            if (guessedThisDigit && i == digit)
             {
-                eddAgent->classificationFitness += score / numDigitsGuessed;
+                // true positive
+                eddAgent->truePositives[i] += 1;
+                score = 1.0;
             }
+            
+            else if (guessedThisDigit && i != digit)
+            {
+                // false positive
+                eddAgent->falsePositives[i] += 1;
+            }
+            
+            else if (!guessedThisDigit && i == digit)
+            {
+                // false negative
+                eddAgent->falseNegatives[i] += 1;
+            }
+            
+            else if (!guessedThisDigit && i != digit)
+            {
+                // true negative
+                eddAgent->trueNegatives[i] += 1;
+            }
+        }
+        
+        if (numDigitsGuessed > 0.0)
+        {
+            eddAgent->classificationFitness += score / numDigitsGuessed;
         }
     }
     
@@ -348,8 +349,8 @@ string tGame::executeGame(tAgent* eddAgent, FILE *dataFile, bool report, int gri
     }
     
     // compute overall fitness
-    eddAgent->fitness = eddAgent->classificationFitness / (totalStepsInSimulation * 10.0);
-    eddAgent->classificationFitness = eddAgent->classificationFitness / (totalStepsInSimulation * 10.0);
+    eddAgent->fitness = eddAgent->classificationFitness / 10.0;
+    eddAgent->classificationFitness = eddAgent->classificationFitness / 10.0;
     
     // don't allow fitness to be 0 nor negative
     if (eddAgent->fitness <= 0.0)

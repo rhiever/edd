@@ -124,17 +124,15 @@ int main(int argc, char *argv[])
         else if (strcmp(argv[i], "-g") == 0 && (i + 1) < argc)
         {
             ++i;
+            totalGenerations = atoi(argv[i]);
             
-            // add 2 generations because we look at ancestor->ancestor as best agent at end of sim
-            totalGenerations = atoi(argv[i]) + 2;
-            
-            if (totalGenerations < 3)
+            if (totalGenerations < 5)
             {
-                cerr << "minimum number of generations permitted is 3." << endl;
+                cerr << "minimum number of generations permitted is 5." << endl;
                 exit(0);
             }
             
-            cout << "generations set to " << totalGenerations - 2 << endl;
+            cout << "generations set to " << totalGenerations << endl;
         }
         
         // -t [int]: track best brains
@@ -484,9 +482,9 @@ int main(int argc, char *argv[])
         {
             stringstream ess;
             
-            ess << "edd" << update << ".genome";
+            ess << eddGenomeFileName << "-gen" << update;
             
-            eddAgents[0]->ancestor->ancestor->saveGenome(ess.str().c_str());
+            bestEddAgent->saveGenome(ess.str().c_str());
         }
 	}
 	
