@@ -43,7 +43,8 @@
       selectedDebuggerIdentifier = "Xcode.DebuggerFoundation.Debugger.LLDB"
       selectedLauncherIdentifier = "Xcode.DebuggerFoundation.Launcher.LLDB"
       launchStyle = "0"
-      useCustomWorkingDirectory = "NO"
+      useCustomWorkingDirectory = "YES"
+      customWorkingDirectory = "/Users/olsonran/Documents/experiments/edd/work"
       buildConfiguration = "Debug"
       ignoresPersistentStateOnLaunch = "NO"
       debugDocumentVersioning = "YES"
@@ -60,6 +61,10 @@
       <CommandLineArguments>
          <CommandLineArgument
             argument = "-e LOD.csv agent.genome -g 50000 -zc -rp -gs 10 10"
+            isEnabled = "NO">
+         </CommandLineArgument>
+         <CommandLineArgument
+            argument = "-d bestAgent.genome bestAgent.txt -zc -rp -gs 10 10"
             isEnabled = "YES">
          </CommandLineArgument>
       </CommandLineArguments>

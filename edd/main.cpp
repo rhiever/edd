@@ -29,6 +29,7 @@
 #include <math.h>
 #include <time.h>
 #include <iostream>
+#include <fstream>
 #include <dirent.h>
 
 #include "globalConst.h"
@@ -67,7 +68,7 @@ int main(int argc, char *argv[])
 	tAgent *eddAgent = NULL, *bestEddAgent = NULL;
 	double eddMaxFitness = 0.0;
     string LODFileName = "", eddGenomeFileName = "", inputGenomeFileName = "";
-    string eddDotFileName = "", logicTableFileName = "";
+    string eddDotFileName = "", logicTableFileName = "", visualizationFileName = "";
     int displayDirectoryArgvIndex = 0;
     
     // initial object setup
@@ -79,11 +80,16 @@ int main(int argc, char *argv[])
     
     for (int i = 1; i < argc; ++i)
     {
-        // -d [in file name]: display
+        // -d [in file name] [out file name]: display the given genome in a simulation
         if (strcmp(argv[i], "-d") == 0 && (i + 1) < argc)
         {
             ++i;
             eddAgent->loadAgent(argv[i]);
+            
+            ++i;
+            stringstream vizfn;
+            vizfn << argv[i];
+            visualizationFileName = vizfn.str();
             
             display_only = true;
         }
@@ -238,20 +244,16 @@ int main(int argc, char *argv[])
         }
     }
     
-    // set up the game
+    // set up the simulation
     game = new tGame;
-    
-    if (display_only || display_directory || make_interval_video || make_LOD_video)
-    {
-        // start monitor first, then edd
-        //setupBroadcast();
-    }
     
     if (display_only)
     {
         string bestString = findBestRun(eddAgent);
-        bestString.append("X");
-        //doBroadcast(bestString);
+        ofstream visualizationFile;
+        visualizationFile.open(visualizationFileName);
+        visualizationFile << bestString;
+        visualizationFile.close();
         exit(0);
     }
     
@@ -331,8 +333,6 @@ int main(int argc, char *argv[])
                 {
                     bestString.append("X");
                 }
-                
-                //doBroadcast(bestString);
             }
             else
             {
@@ -414,8 +414,9 @@ int main(int argc, char *argv[])
         }
         bestEddAgent = new tAgent;
         bestEddAgent->inherit(eddAgents[eddMaxIndex], 0.0, update, false);
+        bestEddAgent->setupPhenotype();
 		
-        if (update % 100 == 0)
+        if (update % 1000 == 0)
         {
             cout << "gen " << update << ": edd [" << eddAvgFitness << " : " << eddMaxFitness << "] [genome: " << bestEddAgent->genome.size() << "] [gates: " << bestEddAgent->hmmus.size() << "]" << endl;
         }
@@ -433,8 +434,6 @@ int main(int argc, char *argv[])
                 {
                     bestString.append("X");
                 }
-                
-                //doBroadcast(bestString);
             }
         }
         
@@ -530,8 +529,6 @@ int main(int argc, char *argv[])
             {
                 bestString.append("X");
             }
-            
-            //doBroadcast(bestString);
         }
     }
     

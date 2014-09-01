@@ -25,6 +25,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <algorithm>
+#include <sstream>
 
 // simulation-specific constants
 #define totalStepsInSimulation      20
@@ -88,7 +89,7 @@ tGame::~tGame() { }
 // runs the simulation for the given agent(s)
 string tGame::executeGame(tAgent* eddAgent, FILE *dataFile, bool report, int gridSizeX, int gridSizeY, bool zoomingCamera, bool randomPlacement, bool noise, float noiseAmount)
 {
-    string reportString = "";
+    stringstream reportString;
     
     // grid that the digits are placed in
     // first index is for the digit (0-9)
@@ -110,6 +111,8 @@ string tGame::executeGame(tAgent* eddAgent, FILE *dataFile, bool report, int gri
     // if the digits are being randomly placed, place all 10 digits (0-9)
     // in random spots on the grid at the beginning of every simulation
     // otherwise, place all 10 digits (0-9) centered in the grid
+    int digitCentersX[10], digitCentersY[10];
+    
     for (int digit = 0; digit < 10; ++digit)
     {
         int digitCenterX = (int)(gridSizeX / 2.0), digitCenterY = (int)(gridSizeY / 2.0);
@@ -133,6 +136,9 @@ string tGame::executeGame(tAgent* eddAgent, FILE *dataFile, bool report, int gri
         }
         
         placeDigit(digitGrid, digit, digitCenterX, digitCenterY);
+        
+        digitCentersX[digit] = digitCenterX;
+        digitCentersY[digit] = digitCenterY;
     }
     
     // set up brain for EDD agent
@@ -173,18 +179,18 @@ string tGame::executeGame(tAgent* eddAgent, FILE *dataFile, bool report, int gri
         cameraY = gridSizeY / 2.0;
         cameraSize = 3;
         
+        if (report)
+        {
+            reportString << digit << "," << digitCentersX[digit] << "," << digitCentersY[digit] << "\n";
+        }
+        
         for (int step = 0; step < totalStepsInSimulation; ++step)
         {
             
             /*       CREATE THE REPORT STRING FOR THE VIDEO       */
             if (report)
             {
-                // report X, Y, angle of EDD agent
-                /*char text[1000];
-                 sprintf(text,"%f,%f,%f,%d,%d,%d=", predX, predY, predA, 255, 0, 0);
-                 reportString.append(text);
-                 reportString.append("N");*/
-                
+                reportString << cameraX << "," << cameraY << "," << cameraSize << "\n";
             }
             /*       END OF REPORT STRING CREATION       */
             
@@ -280,6 +286,11 @@ string tGame::executeGame(tAgent* eddAgent, FILE *dataFile, bool report, int gri
             }
         }
         
+        if (report)
+        {
+            reportString << "X\n";
+        }
+        
         // parse edd agent classifications
         int classifyDigit[10];
         for (int i = 0; i < 10; ++i)
@@ -367,7 +378,9 @@ string tGame::executeGame(tAgent* eddAgent, FILE *dataFile, bool report, int gri
                 );
     }
     
-    return reportString;
+    cout << eddAgent->fitness << endl;
+    
+    return reportString.str();
 }
 
 // place the given digit on the digitGrid at the given point (digitCenterX, digitCenterY)
