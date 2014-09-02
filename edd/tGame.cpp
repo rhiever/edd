@@ -30,59 +30,7 @@
 // simulation-specific constants
 #define totalStepsInSimulation      20
 
-// each sensor's (x, y) offset from the center of the camera
-map< int, vector<int> > sensorOffsetMap;
-
-
-tGame::tGame()
-{
-    // pre-compute the sensor offsets
-    // to maintain the same order of inputs, start counting sensors from the inside.
-    // e.g. for 7x7:
-    
-    // 43 42 41 40 39 38 37
-    // 44 21 20 19 18 17 36
-    // 45 22 7  6  5  16 35
-    // 46 23 8  0  4  15 34
-    // 47 24 1  2  3  14 33
-    // 48 9  10 11 12 13 32
-    // 25 26 27 28 29 30 31
-    
-    int offsetX = 0, offsetY = 0;
-    int offsetAmount = 0;
-    
-    for (int sensor = 0; sensor < 111 * 111; ++sensor)
-    {
-        int root = sqrt(sensor);
-        if (root % 2 == 1 && root * root == sensor)
-        {
-            ++offsetAmount;
-            offsetX = -offsetAmount;
-            offsetY = -offsetAmount;
-        }
-        else if (offsetX != offsetAmount && offsetY == -offsetAmount)
-        {
-            ++offsetX;
-        }
-        else if (offsetX == offsetAmount && offsetY != offsetAmount)
-        {
-            ++offsetY;
-        }
-        else if (offsetX != -offsetAmount && offsetY == offsetAmount)
-        {
-            --offsetX;
-        }
-        else if (offsetX == -offsetAmount && offsetY != -offsetAmount)
-        {
-            --offsetY;
-        }
-        
-        vector<int> offsets;
-        offsets.push_back(offsetX);
-        offsets.push_back(offsetY);
-        sensorOffsetMap[sensor] = offsets;
-    }
-}
+tGame::tGame() { }
 
 tGame::~tGame() { }
 
@@ -182,32 +130,6 @@ string tGame::executeGame(tAgent* eddAgent, FILE *dataFile, bool report, int gri
         if (report)
         {
             reportString << digit << "," << digitCentersX[digit] << "," << digitCentersY[digit] << "," << gridSizeX << "," << gridSizeY << "\n";
-            
-            vector<int> inputs;
-            
-            for (int hmg = 0; hmg < eddAgent->hmmus.size(); ++hmg)
-            {
-                for (int input = 0; input < eddAgent->hmmus[hmg]->ins.size(); ++input)
-                {
-                    int number = eddAgent->hmmus[hmg]->ins[input] % 64;
-                    if (number <= 36)
-                    {
-                        inputs.push_back(number);
-                    }
-                }
-            }
-            
-            sort( inputs.begin(), inputs.end() );
-            inputs.erase( unique( inputs.begin(), inputs.end() ), inputs.end() );
-            
-            reportString << "[" << sensorOffsetMap[inputs[0]][0] << "," << sensorOffsetMap[inputs[0]][1] << "]";
-            
-            for (int i = 1; i < inputs.size(); ++i)
-            {
-                reportString << ",[" << sensorOffsetMap[inputs[i]][0] << "," << sensorOffsetMap[inputs[i]][1] << "]";
-            }
-            
-            reportString << "\n";
         }
         
         for (int step = 0; step < totalStepsInSimulation; ++step)
@@ -229,7 +151,7 @@ string tGame::executeGame(tAgent* eddAgent, FILE *dataFile, bool report, int gri
             /*       END OF DATA GATHERING       */
             
             // clear all sensors
-            for (int sensor = 0; sensor < pow(min(gridSizeX, gridSizeY), 2.0); ++sensor)
+            for (int sensor = 0; sensor < 9; ++sensor)
             {
                 eddAgent->states[sensor] = 0;
             }
@@ -243,28 +165,121 @@ string tGame::executeGame(tAgent* eddAgent, FILE *dataFile, bool report, int gri
             
             // can zoom out to 5x5, 7x7, etc.
             
-            // to maintain same order of inputs, start counting sensors from the inside.
-            // e.g. for 7x7:
+            // to maintain the same order of inputs, start counting sensors from the inside.
+            // e.g. for 3x3:
             
-            // 43 42 41 40 39 38 37
-            // 44 21 20 19 18 17 36
-            // 45 22 7  6  5  16 35
-            // 46 23 8  0  4  15 34
-            // 47 24 1  2  3  14 33
-            // 48 9  10 11 12 13 32
-            // 25 26 27 28 29 30 31
+            // 7  6  5
+            // 8  0  4
+            // 1  2  3
             
-            for (int sensor = 0; sensor < cameraSize * cameraSize; ++sensor)
+            // when the camera zooms out, start coarse graining the image to maintain the same
+            // number of inputs
+            // e.g. for 5x5:
+            
+            // 7 7 6 5 5
+            // 7 7 6 5 5
+            // 8 8 0 4 4
+            // 1 1 2 3 3
+            // 1 1 2 3 3
+            
+            int maxOffset = cameraSize / 2;
+            
+            // sensor 0
+            if (cameraX >= 0 && cameraX < gridSizeX &&
+                cameraY >= 0 && cameraY < gridSizeY)
             {
-                int sensorX = cameraX + sensorOffsetMap[sensor][0];
-                int sensorY = cameraY + sensorOffsetMap[sensor][1];
-                
-                if (sensorX >= 0 && sensorX < gridSizeX && sensorY >= 0 && sensorY < gridSizeY)
+                eddAgent->states[0] = digitGrid[digit][cameraX][cameraY];
+            }
+            
+            // sensor 1
+            for (int offsetX = -maxOffset; offsetX < 0; ++offsetX)
+            {
+                for (int offsetY = -maxOffset; offsetY < 0; ++offsetY)
                 {
-                    if (digitGrid[digit][sensorX][sensorY] == 1)
+                    if (cameraX + offsetX >= 0 && cameraX + offsetX < gridSizeX &&
+                        cameraY + offsetY >= 0 && cameraY + offsetY < gridSizeY)
                     {
-                        eddAgent->states[sensor] = 1;
+                        eddAgent->states[1] |= digitGrid[digit][cameraX + offsetX][cameraY + offsetY];
                     }
+                }
+            }
+            
+            // sensor 2
+            for (int offsetY = -maxOffset; offsetY < 0; ++offsetY)
+            {
+                if (cameraX >= 0 && cameraX < gridSizeX &&
+                    cameraY + offsetY >= 0 && cameraY + offsetY < gridSizeY)
+                {
+                    eddAgent->states[2] |= digitGrid[digit][cameraX][cameraY + offsetY];
+                }
+            }
+            
+            // sensor 3
+            for (int offsetX = maxOffset; offsetX > 0; --offsetX)
+            {
+                for (int offsetY = -maxOffset; offsetY < 0; ++offsetY)
+                {
+                    if (cameraX + offsetX >= 0 && cameraX + offsetX < gridSizeX &&
+                        cameraY + offsetY >= 0 && cameraY + offsetY < gridSizeY)
+                    {
+                        eddAgent->states[3] |= digitGrid[digit][cameraX + offsetX][cameraY + offsetY];
+                    }
+                }
+            }
+            
+            // sensor 4
+            for (int offsetX = maxOffset; offsetX > 0; --offsetX)
+            {
+                if (cameraX + offsetX >= 0 && cameraX + offsetX < gridSizeX &&
+                    cameraY >= 0 && cameraY < gridSizeY)
+                {
+                    eddAgent->states[4] |= digitGrid[digit][cameraX + offsetX][cameraY];
+                }
+            }
+            
+            // sensor 5
+            for (int offsetX = maxOffset; offsetX > 0; --offsetX)
+            {
+                for (int offsetY = maxOffset; offsetY > 0; --offsetY)
+                {
+                    if (cameraX + offsetX >= 0 && cameraX + offsetX < gridSizeX &&
+                        cameraY + offsetY >= 0 && cameraY + offsetY < gridSizeY)
+                    {
+                        eddAgent->states[5] |= digitGrid[digit][cameraX + offsetX][cameraY + offsetY];
+                    }
+                }
+            }
+            
+            // sensor 6
+            for (int offsetY = maxOffset; offsetY > 0; --offsetY)
+            {
+                if (cameraX >= 0 && cameraX < gridSizeX &&
+                    cameraY + offsetY >= 0 && cameraY + offsetY < gridSizeY)
+                {
+                    eddAgent->states[6] |= digitGrid[digit][cameraX][cameraY + offsetY];
+                }
+            }
+            
+            // sensor 7
+            for (int offsetX = -maxOffset; offsetX < 0; ++offsetX)
+            {
+                for (int offsetY = maxOffset; offsetY > 0; --offsetY)
+                {
+                    if (cameraX + offsetX >= 0 && cameraX + offsetX < gridSizeX &&
+                        cameraY + offsetY >= 0 && cameraY + offsetY < gridSizeY)
+                    {
+                        eddAgent->states[7] |= digitGrid[digit][cameraX + offsetX][cameraY + offsetY];
+                    }
+                }
+            }
+            
+            // sensor 8
+            for (int offsetX = -maxOffset; offsetX < 0; ++offsetX)
+            {
+                if (cameraX + offsetX >= 0 && cameraX + offsetX < gridSizeX &&
+                    cameraY >= 0 && cameraY < gridSizeY)
+                {
+                    eddAgent->states[8] |= digitGrid[digit][cameraX + offsetX][cameraY];
                 }
             }
             
@@ -299,14 +314,14 @@ string tGame::executeGame(tAgent* eddAgent, FILE *dataFile, bool report, int gri
             if (zoomingCamera && moveLeft) cameraX -= 1;
             
             // zoom the camera in and out
-            // minimum camera size = 1
-            if (zoomingCamera && zoomIn && cameraSize > 1)
+            // minimum camera size = 3
+            if (zoomingCamera && zoomIn && cameraSize - 2 > 3)
             {
                 cameraSize -= 2;
             }
             
             // maximum camera size is limited by size of digit grid
-            if (zoomingCamera && zoomOut && cameraSize + 2 <= gridSizeX && cameraSize + 2 <= 9)
+            if (zoomingCamera && zoomOut && cameraSize + 2 <= gridSizeX && cameraSize + 2 <= gridSizeY)
             {
                 cameraSize += 2;
             }
