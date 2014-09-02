@@ -251,7 +251,7 @@ int main(int argc, char *argv[])
     {
         string bestString = findBestRun(eddAgent);
         ofstream visualizationFile;
-        visualizationFile.open(visualizationFileName);
+        visualizationFile.open(visualizationFileName.c_str());
         visualizationFile << bestString;
         visualizationFile.close();
         exit(0);

@@ -61,11 +61,11 @@
       <CommandLineArguments>
          <CommandLineArgument
             argument = "-e LOD.csv agent.genome -g 50000 -zc -rp -gs 10 10"
-            isEnabled = "NO">
+            isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
             argument = "-d bestAgent.genome bestAgent.txt -zc -rp -gs 10 10"
-            isEnabled = "YES">
+            isEnabled = "NO">
          </CommandLineArgument>
       </CommandLineArguments>
       <AdditionalOptions>

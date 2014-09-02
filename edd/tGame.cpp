@@ -181,7 +181,33 @@ string tGame::executeGame(tAgent* eddAgent, FILE *dataFile, bool report, int gri
         
         if (report)
         {
-            reportString << digit << "," << digitCentersX[digit] << "," << digitCentersY[digit] << "\n";
+            reportString << digit << "," << digitCentersX[digit] << "," << digitCentersY[digit] << "," << gridSizeX << "," << gridSizeY << "\n";
+            
+            vector<int> inputs;
+            
+            for (int hmg = 0; hmg < eddAgent->hmmus.size(); ++hmg)
+            {
+                for (int input = 0; input < eddAgent->hmmus[hmg]->ins.size(); ++input)
+                {
+                    int number = eddAgent->hmmus[hmg]->ins[input] % 64;
+                    if (number <= 36)
+                    {
+                        inputs.push_back(number);
+                    }
+                }
+            }
+            
+            sort( inputs.begin(), inputs.end() );
+            inputs.erase( unique( inputs.begin(), inputs.end() ), inputs.end() );
+            
+            reportString << "[" << sensorOffsetMap[inputs[0]][0] << "," << sensorOffsetMap[inputs[0]][1] << "]";
+            
+            for (int i = 1; i < inputs.size(); ++i)
+            {
+                reportString << ",[" << sensorOffsetMap[inputs[i]][0] << "," << sensorOffsetMap[inputs[i]][1] << "]";
+            }
+            
+            reportString << "\n";
         }
         
         for (int step = 0; step < totalStepsInSimulation; ++step)
@@ -280,7 +306,7 @@ string tGame::executeGame(tAgent* eddAgent, FILE *dataFile, bool report, int gri
             }
             
             // maximum camera size is limited by size of digit grid
-            if (zoomingCamera && zoomOut && cameraSize + 2 <= gridSizeX && cameraSize + 2 <= gridSizeY)
+            if (zoomingCamera && zoomOut && cameraSize + 2 <= gridSizeX && cameraSize + 2 <= 9)
             {
                 cameraSize += 2;
             }
@@ -377,8 +403,6 @@ string tGame::executeGame(tAgent* eddAgent, FILE *dataFile, bool report, int gri
                 eddAgent->fitness       // edd agent fitness
                 );
     }
-    
-    cout << eddAgent->fitness << endl;
     
     return reportString.str();
 }
@@ -645,7 +669,7 @@ void tGame::placeDigit(vector< vector< vector<int> > > &digitGrid, int digit, in
             digitGrid[6][digitCenterX + 2][digitCenterY - 2] = 0;
             
             digitGrid[6][digitCenterX - 2][digitCenterY - 1] = 0;
-            digitGrid[6][digitCenterX - 1][digitCenterY - 1] = 0;
+            digitGrid[6][digitCenterX - 1][digitCenterY - 1] = 1;
             digitGrid[6][digitCenterX][digitCenterY - 1] = 0;
             digitGrid[6][digitCenterX + 1][digitCenterY - 1] = 1;
             digitGrid[6][digitCenterX + 2][digitCenterY - 1] = 0;
