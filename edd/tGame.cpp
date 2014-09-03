@@ -315,7 +315,7 @@ string tGame::executeGame(tAgent* eddAgent, FILE *dataFile, bool report, int gri
             
             // zoom the camera in and out
             // minimum camera size = 3
-            if (zoomingCamera && zoomIn && cameraSize - 2 > 3)
+            if (zoomingCamera && zoomIn && cameraSize > 3)
             {
                 cameraSize -= 2;
             }
