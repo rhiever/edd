@@ -59,18 +59,20 @@ int     gridSizeX                   = 5;
 int     gridSizeY                   = 5;
 bool    zoomingCamera               = false;
 bool    randomPlacement             = false;
+bool    randomStart                 = false;
 bool    noise                       = false;
 float   noiseAmount                 = 0.05;
+bool    digitRotation               = false;
 
 int main(int argc, char *argv[])
 {
-	vector<tAgent*> eddAgents, EANextGen;
-	tAgent *eddAgent = NULL, *bestEddAgent = NULL;
-	double eddMaxFitness = 0.0;
-    string LODFileName = "", eddGenomeFileName = "", inputGenomeFileName = "";
-    string eddDotFileName = "", logicTableFileName = "", visualizationFileName = "";
-    int displayDirectoryArgvIndex = 0;
-    
+  vector<tAgent*> eddAgents, EANextGen;
+  tAgent *eddAgent = NULL, *bestEddAgent = NULL;
+  double eddMaxFitness = 0.0;
+  string LODFileName = "", eddGenomeFileName = "", inputGenomeFileName = "";
+  string eddDotFileName = "", logicTableFileName = "", visualizationFileName = "";
+  int displayDirectoryArgvIndex = 0;
+  
     // initial object setup
     eddAgents.resize(populationSize);
 	eddAgent = new tAgent;
@@ -140,6 +142,15 @@ int main(int argc, char *argv[])
             
             cout << "generations set to " << totalGenerations << endl;
         }
+
+	// -mr [float]: set the per site mutation rate
+	else if (strcmp(argv[i], "-mr") == 0 && (i + 1) < argc)
+	  {
+            ++i;
+            perSiteMutationRate = atof(argv[i]);
+
+            cout << "per site mutation rate set to " << perSiteMutationRate << endl;
+	  }
         
         // -t [int]: track best brains
         else if (strcmp(argv[i], "-t") == 0 && (i + 1) < argc)
@@ -232,6 +243,14 @@ int main(int argc, char *argv[])
             cout << "random placement of digits enabled" << endl;
             randomPlacement = true;
         }
+
+	// -rs: randomly place the camera within the grid at the beginning.
+	//if randomStart = false, the camera always starts in the center
+	else if (strcmp(argv[i], "-rs") == 0)
+	  {
+            cout << "random start position for camera enabled" << endl;
+            randomStart = true;
+	  }
         
         // -noise [float]: add noise to the edd agent's camera; each input bit is flipped
         // with the probability given (0.0 = never, 1.0 = always flipped)
@@ -242,6 +261,13 @@ int main(int argc, char *argv[])
             noiseAmount = atof(argv[i]);
             cout << "noise enabled with probability: " << noiseAmount << endl;
         }
+
+	// -rot: randomly rotate the digits for extra difficulty
+	else if (strcmp(argv[i], "-rot") == 0)
+          {
+            cout << "rotation of digits enabled" << endl;
+            digitRotation = true;
+          }
     }
     
     // set up the simulation
@@ -359,7 +385,7 @@ int main(int argc, char *argv[])
     delete eddAgent;
     eddAgent = new tAgent;
     eddAgent->setupRandomAgent(10000);
-    //eddAgent->loadAgent("startAgent.genome");
+    //eddAgent->loadAgent("run17agent.genome-gen1000000");
     
     // make mutated copies of the start genome to fill up the initial population
 	for(int i = 0; i < populationSize; ++i)
@@ -392,7 +418,7 @@ int main(int argc, char *argv[])
         
 		for (int i = 0; i < populationSize; ++i)
         {
-            game->executeGame(eddAgents[i], NULL, false, gridSizeX, gridSizeY, zoomingCamera, randomPlacement, noise, noiseAmount);
+	  game->executeGame(eddAgents[i], NULL, false, gridSizeX, gridSizeY, zoomingCamera, randomPlacement, randomStart, noise, noiseAmount, digitRotation);
             
             eddAvgFitness += eddAgents[i]->classificationFitness;
             
@@ -428,7 +454,7 @@ int main(int argc, char *argv[])
             
             if (update % make_video_frequency == 0 || finalGeneration)
             {
-                string bestString = game->executeGame(bestEddAgent, NULL, true, gridSizeX, gridSizeY, zoomingCamera, randomPlacement, noise, noiseAmount);
+	      string bestString = game->executeGame(bestEddAgent, NULL, true, gridSizeX, gridSizeY, zoomingCamera, randomPlacement, randomStart, noise, noiseAmount, digitRotation);
                 
                 if (finalGeneration)
                 {
@@ -518,7 +544,7 @@ int main(int argc, char *argv[])
     for (vector<tAgent*>::iterator it = saveLOD.begin(); it != saveLOD.end(); ++it)
     {
         // collect quantitative stats
-        game->executeGame(*it, LOD, false, gridSizeX, gridSizeY, zoomingCamera, randomPlacement, noise, noiseAmount);
+      game->executeGame(*it, LOD, false, gridSizeX, gridSizeY, zoomingCamera, randomPlacement, randomStart, noise, noiseAmount, digitRotation);
         
         // make video
         if (make_LOD_video)
@@ -544,7 +570,7 @@ string findBestRun(tAgent *eddAgent)
     
     for (int rep = 0; rep < 100; ++rep)
     {
-        reportString = game->executeGame(eddAgent, NULL, true, gridSizeX, gridSizeY, zoomingCamera, randomPlacement, noise, noiseAmount);
+      reportString = game->executeGame(eddAgent, NULL, true, gridSizeX, gridSizeY, zoomingCamera, randomPlacement, randomStart, noise, noiseAmount, digitRotation);
         
         if (eddAgent->fitness > bestFitness)
         {

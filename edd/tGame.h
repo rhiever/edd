@@ -34,10 +34,10 @@ using namespace std;
 class tGame
 {
 public:
-    string executeGame(tAgent* eddAgent, FILE *dataFile, bool report, int gridSizeX, int gridSizeY, bool zoomingCamera, bool randomPlacement, bool noise, float noiseAmount);
+  string executeGame(tAgent* eddAgent, FILE *dataFile, bool report, int gridSizeX, int gridSizeY, bool zoomingCamera, bool randomPlacement, bool randomStart, bool noise, float noiseAmount, bool digitRotation);
     tGame();
     ~tGame();
-    void placeDigit(vector< vector< vector<int> > > &digitGrid, int digit, int digitCenterX, int digitCenterY);
+    void placeDigit(vector< vector< vector<int> > > &digitGrid, int digit, int rotation, int digitCenterX, int digitCenterY);
     double sum(vector<double> values);
     double average(vector<double> values);
     double variance(vector<double> values);

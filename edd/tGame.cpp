@@ -26,16 +26,111 @@
 #include <stdio.h>
 #include <algorithm>
 #include <sstream>
+#include <iostream>
+#include <fstream>
+#include <string>
 
 // simulation-specific constants
 #define totalStepsInSimulation      20
+#define MAX_CAM_SIZE                3
 
-tGame::tGame() { }
+// each sensor's (x, y) offset from the center of the camera
+map< int, vector<int> > sensorOffsetMap;
+
+map< string, vector< vector<int> > > symbols;
+
+tGame::tGame()
+{
+    // pre-compute the sensor offsets
+    // to maintain the same order of inputs, start counting sensors from the inside.
+    // e.g. for 7x7:
+    
+    // 43 42 41 40 39 38 37
+    // 44 21 20 19 18 17 36
+    // 45 22 7  6  5  16 35
+    // 46 23 8  0  4  15 34
+    // 47 24 1  2  3  14 33
+    // 48 9  10 11 12 13 32
+    // 25 26 27 28 29 30 31
+    
+    int offsetX = 0, offsetY = 0;
+    int offsetAmount = 0;
+    
+    for (int sensor = 0; sensor < 111 * 111; ++sensor)
+    {
+        int root = sqrt(sensor);
+        if (root % 2 == 1 && root * root == sensor)
+        {
+            ++offsetAmount;
+            offsetX = -offsetAmount;
+            offsetY = -offsetAmount;
+        }
+        else if (offsetX != offsetAmount && offsetY == -offsetAmount)
+        {
+            ++offsetX;
+        }
+        else if (offsetX == offsetAmount && offsetY != offsetAmount)
+        {
+            ++offsetY;
+        }
+        else if (offsetX != -offsetAmount && offsetY == offsetAmount)
+        {
+            --offsetX;
+        }
+        else if (offsetX == -offsetAmount && offsetY != -offsetAmount)
+        {
+            --offsetY;
+        }
+        
+        vector<int> offsets;
+        offsets.push_back(offsetX);
+        offsets.push_back(offsetY);
+        sensorOffsetMap[sensor] = offsets;
+    }
+    
+    ifstream symbolFile ("symbols.txt");
+    string line;
+    string key = "";
+    vector< vector<int> > symbol;
+    int symbolRow = 0;
+
+    while ( getline (symbolFile, line) )
+      {
+	if (line.find("-") != string::npos)
+	  {
+	    key = line;
+	    symbol.clear();
+	    symbolRow = 0;
+	  }
+	
+	else if (line.find("0") != string::npos || line.find("1") != string::npos)
+	  {
+	    symbol.resize(symbol.size() + 1);
+	    
+	    for (int i = 0; i < line.length(); ++i)
+	      {
+		if (line.substr(i, 1) != " ")
+		  {
+		    symbol[symbolRow].push_back(atoi(line.substr(i, 1).c_str()));
+		  }
+	      }
+	    
+	    ++symbolRow;
+	  }
+
+	else
+	  {
+	    symbols[key] = symbol;
+	  }
+      }
+
+    symbolFile.close();
+}
 
 tGame::~tGame() { }
 
 // runs the simulation for the given agent(s)
-string tGame::executeGame(tAgent* eddAgent, FILE *dataFile, bool report, int gridSizeX, int gridSizeY, bool zoomingCamera, bool randomPlacement, bool noise, float noiseAmount)
+string tGame::executeGame(tAgent* eddAgent, FILE *dataFile, bool report, int gridSizeX, int gridSizeY, bool zoomingCamera, bool randomPlacement, bool randomStart, bool noise, float noiseAmount, bool digitRotation)
 {
     stringstream reportString;
     
@@ -60,6 +155,7 @@ string tGame::executeGame(tAgent* eddAgent, FILE *dataFile, bool report, int gri
     // in random spots on the grid at the beginning of every simulation
     // otherwise, place all 10 digits (0-9) centered in the grid
     int digitCentersX[10], digitCentersY[10];
+    int digitRotated[10];
     
     for (int digit = 0; digit < 10; ++digit)
     {
@@ -82,13 +178,39 @@ string tGame::executeGame(tAgent* eddAgent, FILE *dataFile, bool report, int gri
             }
 
         }
-        
-        placeDigit(digitGrid, digit, digitCenterX, digitCenterY);
+
+	digitRotated[digit] = 0;
+
+	if (digitRotation)
+	  {
+	    do
+	      {
+		digitRotated[digit] = (int)(randDouble * 4.0);
+	      } while (digitRotated[digit] == 4);
+	  }
+	
+        placeDigit(digitGrid, digit, digitRotated[digit], digitCenterX, digitCenterY);
         
         digitCentersX[digit] = digitCenterX;
         digitCentersY[digit] = digitCenterY;
     }
-    
+
+    // visualize the digits
+    /*for (int digit = 0; digit < 10; ++digit)
+      {
+	cout << digit << endl;
+	
+	for (int x = 0; x < gridSizeX; ++x)
+	  {
+	    for (int y = 0; y < gridSizeY; ++y)
+	      {
+		cout << digitGrid[digit][x][y] << " ";
+	      }
+	    cout << endl;
+	  }
+	cout << "---" << endl;
+      }*/
+
     // set up brain for EDD agent
     eddAgent->setupPhenotype();
     eddAgent->classificationFitness = 0.0;
@@ -114,7 +236,6 @@ string tGame::executeGame(tAgent* eddAgent, FILE *dataFile, bool report, int gri
     for (int digit = 0; digit < 10; ++digit)
     {
         digits.push_back(digit);
-        vector<int> digitClassifications;
     }
     random_shuffle(digits.begin(), digits.end());
     
@@ -126,10 +247,19 @@ string tGame::executeGame(tAgent* eddAgent, FILE *dataFile, bool report, int gri
         cameraX = gridSizeX / 2.0;
         cameraY = gridSizeY / 2.0;
         cameraSize = 3;
+
+	if (randomStart)
+	  {
+	    do
+	      {
+		cameraX = (int)(randDouble * gridSizeX);
+		cameraY = (int)(randDouble * gridSizeY);
+	      } while (cameraX == gridSizeX || cameraY == gridSizeY);
+	  }
         
         if (report)
         {
-            reportString << digit << "," << digitCentersX[digit] << "," << digitCentersY[digit] << "," << gridSizeX << "," << gridSizeY << "\n";
+	  reportString << digit << "-" << digitRotated[digit] << "," << digitCentersX[digit] << "," << digitCentersY[digit] << "," << gridSizeX << "," << gridSizeY << "\n";
         }
         
         for (int step = 0; step < totalStepsInSimulation; ++step)
@@ -138,7 +268,7 @@ string tGame::executeGame(tAgent* eddAgent, FILE *dataFile, bool report, int gri
             /*       CREATE THE REPORT STRING FOR THE VIDEO       */
             if (report)
             {
-                reportString << cameraX << "," << cameraY << "," << cameraSize << "\n";
+	      reportString << cameraX << "," << cameraY << "," << cameraSize;
             }
             /*       END OF REPORT STRING CREATION       */
             
@@ -151,7 +281,7 @@ string tGame::executeGame(tAgent* eddAgent, FILE *dataFile, bool report, int gri
             /*       END OF DATA GATHERING       */
             
             // clear all sensors
-            for (int sensor = 0; sensor < 9; ++sensor)
+            for (int sensor = 0; sensor < (MAX_CAM_SIZE * MAX_CAM_SIZE) + 4; ++sensor)
             {
                 eddAgent->states[sensor] = 0;
             }
@@ -165,126 +295,60 @@ string tGame::executeGame(tAgent* eddAgent, FILE *dataFile, bool report, int gri
             
             // can zoom out to 5x5, 7x7, etc.
             
-            // to maintain the same order of inputs, start counting sensors from the inside.
-            // e.g. for 3x3:
+            // to maintain same order of inputs, start counting sensors from the inside.
+            // e.g. for 7x7:
             
-            // 7  6  5
-            // 8  0  4
-            // 1  2  3
+            // 43 42 41 40 39 38 37
+            // 44 21 20 19 18 17 36
+            // 45 22 7  6  5  16 35
+            // 46 23 8  0  4  15 34
+            // 47 24 1  2  3  14 33
+            // 48 9  10 11 12 13 32
+            // 25 26 27 28 29 30 31
             
-            // when the camera zooms out, start coarse graining the image to maintain the same
-            // number of inputs
-            // e.g. for 5x5:
-            
-            // 7 7 6 5 5
-            // 7 7 6 5 5
-            // 8 8 0 4 4
-            // 1 1 2 3 3
-            // 1 1 2 3 3
-            
-            int maxOffset = cameraSize / 2;
-            
-            // sensor 0
-            if (cameraX >= 0 && cameraX < gridSizeX &&
-                cameraY >= 0 && cameraY < gridSizeY)
+            for (int sensor = 0; sensor < cameraSize * cameraSize; ++sensor)
             {
-                eddAgent->states[0] = digitGrid[digit][cameraX][cameraY];
-            }
-            
-            // sensor 1
-            for (int offsetX = -maxOffset; offsetX < 0; ++offsetX)
-            {
-                for (int offsetY = -maxOffset; offsetY < 0; ++offsetY)
+                int sensorX = cameraX + sensorOffsetMap[sensor][0];
+                int sensorY = cameraY + sensorOffsetMap[sensor][1];
+                
+                if (sensorX >= 0 && sensorX < gridSizeX && sensorY >= 0 && sensorY < gridSizeY)
                 {
-                    if (cameraX + offsetX >= 0 && cameraX + offsetX < gridSizeX &&
-                        cameraY + offsetY >= 0 && cameraY + offsetY < gridSizeY)
+                    if (digitGrid[digit][sensorX][sensorY] == 1)
                     {
-                        eddAgent->states[1] |= digitGrid[digit][cameraX + offsetX][cameraY + offsetY];
+                        eddAgent->states[sensor] = 1;
                     }
                 }
             }
-            
-            // sensor 2
-            for (int offsetY = -maxOffset; offsetY < 0; ++offsetY)
-            {
-                if (cameraX >= 0 && cameraX < gridSizeX &&
-                    cameraY + offsetY >= 0 && cameraY + offsetY < gridSizeY)
-                {
-                    eddAgent->states[2] |= digitGrid[digit][cameraX][cameraY + offsetY];
-                }
-            }
-            
-            // sensor 3
-            for (int offsetX = maxOffset; offsetX > 0; --offsetX)
-            {
-                for (int offsetY = -maxOffset; offsetY < 0; ++offsetY)
-                {
-                    if (cameraX + offsetX >= 0 && cameraX + offsetX < gridSizeX &&
-                        cameraY + offsetY >= 0 && cameraY + offsetY < gridSizeY)
-                    {
-                        eddAgent->states[3] |= digitGrid[digit][cameraX + offsetX][cameraY + offsetY];
-                    }
-                }
-            }
-            
-            // sensor 4
-            for (int offsetX = maxOffset; offsetX > 0; --offsetX)
-            {
-                if (cameraX + offsetX >= 0 && cameraX + offsetX < gridSizeX &&
-                    cameraY >= 0 && cameraY < gridSizeY)
-                {
-                    eddAgent->states[4] |= digitGrid[digit][cameraX + offsetX][cameraY];
-                }
-            }
-            
-            // sensor 5
-            for (int offsetX = maxOffset; offsetX > 0; --offsetX)
-            {
-                for (int offsetY = maxOffset; offsetY > 0; --offsetY)
-                {
-                    if (cameraX + offsetX >= 0 && cameraX + offsetX < gridSizeX &&
-                        cameraY + offsetY >= 0 && cameraY + offsetY < gridSizeY)
-                    {
-                        eddAgent->states[5] |= digitGrid[digit][cameraX + offsetX][cameraY + offsetY];
-                    }
-                }
-            }
-            
-            // sensor 6
-            for (int offsetY = maxOffset; offsetY > 0; --offsetY)
-            {
-                if (cameraX >= 0 && cameraX < gridSizeX &&
-                    cameraY + offsetY >= 0 && cameraY + offsetY < gridSizeY)
-                {
-                    eddAgent->states[6] |= digitGrid[digit][cameraX][cameraY + offsetY];
-                }
-            }
-            
-            // sensor 7
-            for (int offsetX = -maxOffset; offsetX < 0; ++offsetX)
-            {
-                for (int offsetY = maxOffset; offsetY > 0; --offsetY)
-                {
-                    if (cameraX + offsetX >= 0 && cameraX + offsetX < gridSizeX &&
-                        cameraY + offsetY >= 0 && cameraY + offsetY < gridSizeY)
-                    {
-                        eddAgent->states[7] |= digitGrid[digit][cameraX + offsetX][cameraY + offsetY];
-                    }
-                }
-            }
-            
-            // sensor 8
-            for (int offsetX = -maxOffset; offsetX < 0; ++offsetX)
-            {
-                if (cameraX + offsetX >= 0 && cameraX + offsetX < gridSizeX &&
-                    cameraY >= 0 && cameraY < gridSizeY)
-                {
-                    eddAgent->states[8] |= digitGrid[digit][cameraX + offsetX][cameraY];
-                }
-            }
+
+	    // "periphery" sensors
+            // these are 4 sensors that tell the agent its relative position to the digit
+
+            // "up" sensor
+            if (digitCentersY[digit] - cameraY > 0)
+              {
+		eddAgent->states[9] = 1;
+              }
+
+            // "down" sensor
+            else if (digitCentersY[digit] - cameraY < 0)
+              {
+                eddAgent->states[10] = 1;
+              }
+
+            // "left" sensor
+            if (digitCentersX[digit] - cameraX < 0)
+              {
+                eddAgent->states[11] = 1;
+              }
+
+	    // "right" sensor
+            else if(digitCentersX[digit] - cameraX > 0)
+              {
+                eddAgent->states[12] = 1;
+              }
             
             // activate the edd agent's brain
-            for (int updateCounter = 0; updateCounter < 4; ++updateCounter)
+            for (int updateCounter = 0; updateCounter < 1; ++updateCounter)
             {
                 eddAgent->updateStates();
             }
@@ -310,22 +374,33 @@ string tGame::executeGame(tAgent* eddAgent, FILE *dataFile, bool report, int gri
             // possible for up/down and left/right actuators to cancel each other out
             if (zoomingCamera && moveUp) cameraY += 1;
             if (zoomingCamera && moveDown) cameraY -= 1;
-            if (zoomingCamera && moveRight) cameraY += 1;
+            if (zoomingCamera && moveRight) cameraX += 1;
             if (zoomingCamera && moveLeft) cameraX -= 1;
-            
-            // zoom the camera in and out
-            // minimum camera size = 3
-            if (zoomingCamera && zoomIn && cameraSize > 3)
-            {
-                cameraSize -= 2;
-            }
-            
-            // maximum camera size is limited by size of digit grid
-            if (zoomingCamera && zoomOut && cameraSize + 2 <= gridSizeX && cameraSize + 2 <= gridSizeY)
-            {
-                cameraSize += 2;
-            }
-        }
+
+	    if (report)
+	      {
+		// parse edd agent classifications
+		int classifyDigit[10];
+		for (int i = 0; i < 10; ++i)
+		  {
+		    classifyDigit[i] = eddAgent->states[(maxNodes - 7 - i)] & 1;
+		  }
+
+		int vetoBits[10];
+		for (int i = 0; i < 10; ++i)
+		  {
+		    vetoBits[i] = eddAgent->states[(maxNodes - 17 - i)] & 1;
+		  }
+		for (int i = 0; i < 10; ++i)
+                  {
+                    if (classifyDigit[i] == 1 && vetoBits[i] == 0)
+                      {
+                        reportString << "," << i;
+                      }
+                  }
+		reportString << "\n";
+	      }
+	}
         
         if (report)
         {
@@ -418,12 +493,14 @@ string tGame::executeGame(tAgent* eddAgent, FILE *dataFile, bool report, int gri
                 eddAgent->fitness       // edd agent fitness
                 );
     }
-    
+
+    //cout << eddAgent->fitness << endl;
+
     return reportString.str();
 }
 
 // place the given digit on the digitGrid at the given point (digitCenterX, digitCenterY)
-void tGame::placeDigit(vector< vector< vector<int> > > &digitGrid, int digit, int digitCenterX, int digitCenterY)
+void tGame::placeDigit(vector< vector< vector<int> > > &digitGrid, int digit, int rotation, int digitCenterX, int digitCenterY)
 {
     for (int i = 0; i < digitGrid[digit].size(); ++i)
     {
@@ -432,403 +509,18 @@ void tGame::placeDigit(vector< vector< vector<int> > > &digitGrid, int digit, in
             digitGrid[digit][i][j] = 0;
         }
     }
-    
-    switch (digit)
-    {
-        case 0:
-            // ~ 0 ~
-            
-            // 0 1 1 1 0
-            // 0 1 0 1 0
-            // 0 1 0 1 0
-            // 0 1 0 1 0
-            // 0 1 1 1 0
-            digitGrid[0][digitCenterX - 2][digitCenterY - 2] = 0;
-            digitGrid[0][digitCenterX - 1][digitCenterY - 2] = 1;
-            digitGrid[0][digitCenterX][digitCenterY - 2] = 1;
-            digitGrid[0][digitCenterX + 1][digitCenterY - 2] = 1;
-            digitGrid[0][digitCenterX + 2][digitCenterY - 2] = 0;
-            
-            digitGrid[0][digitCenterX - 2][digitCenterY - 1] = 0;
-            digitGrid[0][digitCenterX - 1][digitCenterY - 1] = 1;
-            digitGrid[0][digitCenterX][digitCenterY - 1] = 0;
-            digitGrid[0][digitCenterX + 1][digitCenterY - 1] = 1;
-            digitGrid[0][digitCenterX + 2][digitCenterY - 1] = 0;
-            
-            digitGrid[0][digitCenterX - 2][digitCenterY] = 0;
-            digitGrid[0][digitCenterX - 1][digitCenterY] = 1;
-            digitGrid[0][digitCenterX][digitCenterY] = 0;
-            digitGrid[0][digitCenterX + 1][digitCenterY] = 1;
-            digitGrid[0][digitCenterX + 2][digitCenterY] = 0;
-            
-            digitGrid[0][digitCenterX - 2][digitCenterY + 1] = 0;
-            digitGrid[0][digitCenterX - 1][digitCenterY + 1] = 1;
-            digitGrid[0][digitCenterX][digitCenterY + 1] = 0;
-            digitGrid[0][digitCenterX + 1][digitCenterY + 1] = 1;
-            digitGrid[0][digitCenterX + 2][digitCenterY + 1] = 0;
-            
-            digitGrid[0][digitCenterX - 2][digitCenterY + 2] = 0;
-            digitGrid[0][digitCenterX - 1][digitCenterY + 2] = 1;
-            digitGrid[0][digitCenterX][digitCenterY + 2] = 1;
-            digitGrid[0][digitCenterX + 1][digitCenterY + 2] = 1;
-            digitGrid[0][digitCenterX + 2][digitCenterY + 2] = 0;
-            break;
-            
-        case 1:
-            // ~ 1 ~
-            
-            // 0 0 1 0 0
-            // 0 0 1 0 0
-            // 0 0 1 0 0
-            // 0 0 1 0 0
-            // 0 0 1 0 0
-            digitGrid[1][digitCenterX - 2][digitCenterY - 2] = 0;
-            digitGrid[1][digitCenterX - 1][digitCenterY - 2] = 0;
-            digitGrid[1][digitCenterX][digitCenterY - 2] = 1;
-            digitGrid[1][digitCenterX + 1][digitCenterY - 2] = 0;
-            digitGrid[1][digitCenterX + 2][digitCenterY - 2] = 0;
-            
-            digitGrid[1][digitCenterX - 2][digitCenterY - 1] = 0;
-            digitGrid[1][digitCenterX - 1][digitCenterY - 1] = 0;
-            digitGrid[1][digitCenterX][digitCenterY - 1] = 1;
-            digitGrid[1][digitCenterX + 1][digitCenterY - 1] = 0;
-            digitGrid[1][digitCenterX + 2][digitCenterY - 1] = 0;
-            
-            digitGrid[1][digitCenterX - 2][digitCenterY] = 0;
-            digitGrid[1][digitCenterX - 1][digitCenterY] = 0;
-            digitGrid[1][digitCenterX][digitCenterY] = 1;
-            digitGrid[1][digitCenterX + 1][digitCenterY] = 0;
-            digitGrid[1][digitCenterX + 2][digitCenterY] = 0;
-            
-            digitGrid[1][digitCenterX - 2][digitCenterY + 1] = 0;
-            digitGrid[1][digitCenterX - 1][digitCenterY + 1] = 0;
-            digitGrid[1][digitCenterX][digitCenterY + 1] = 1;
-            digitGrid[1][digitCenterX + 1][digitCenterY + 1] = 0;
-            digitGrid[1][digitCenterX + 2][digitCenterY + 1] = 0;
-            
-            digitGrid[1][digitCenterX - 2][digitCenterY + 2] = 0;
-            digitGrid[1][digitCenterX - 1][digitCenterY + 2] = 0;
-            digitGrid[1][digitCenterX][digitCenterY + 2] = 1;
-            digitGrid[1][digitCenterX + 1][digitCenterY + 2] = 0;
-            digitGrid[1][digitCenterX + 2][digitCenterY + 2] = 0;
-            break;
-            
-        case 2:
-            // ~ 2 ~
-            
-            // 0 1 1 1 0
-            // 0 0 0 1 0
-            // 0 0 1 0 0
-            // 0 1 0 0 0
-            // 0 1 1 1 0
-            digitGrid[2][digitCenterX - 2][digitCenterY - 2] = 0;
-            digitGrid[2][digitCenterX - 1][digitCenterY - 2] = 1;
-            digitGrid[2][digitCenterX][digitCenterY - 2] = 1;
-            digitGrid[2][digitCenterX + 1][digitCenterY - 2] = 1;
-            digitGrid[2][digitCenterX + 2][digitCenterY - 2] = 0;
-            
-            digitGrid[2][digitCenterX - 2][digitCenterY - 1] = 0;
-            digitGrid[2][digitCenterX - 1][digitCenterY - 1] = 1;
-            digitGrid[2][digitCenterX][digitCenterY - 1] = 0;
-            digitGrid[2][digitCenterX + 1][digitCenterY - 1] = 0;
-            digitGrid[2][digitCenterX + 2][digitCenterY - 1] = 0;
-            
-            digitGrid[2][digitCenterX - 2][digitCenterY] = 0;
-            digitGrid[2][digitCenterX - 1][digitCenterY] = 0;
-            digitGrid[2][digitCenterX][digitCenterY] = 1;
-            digitGrid[2][digitCenterX + 1][digitCenterY] = 0;
-            digitGrid[2][digitCenterX + 2][digitCenterY] = 0;
-            
-            digitGrid[2][digitCenterX - 2][digitCenterY + 1] = 0;
-            digitGrid[2][digitCenterX - 1][digitCenterY + 1] = 0;
-            digitGrid[2][digitCenterX][digitCenterY + 1] = 0;
-            digitGrid[2][digitCenterX + 1][digitCenterY + 1] = 1;
-            digitGrid[2][digitCenterX + 2][digitCenterY + 1] = 0;
-            
-            digitGrid[2][digitCenterX - 2][digitCenterY + 2] = 0;
-            digitGrid[2][digitCenterX - 1][digitCenterY + 2] = 1;
-            digitGrid[2][digitCenterX][digitCenterY + 2] = 1;
-            digitGrid[2][digitCenterX + 1][digitCenterY + 2] = 1;
-            digitGrid[2][digitCenterX + 2][digitCenterY + 2] = 0;
-            break;
-            
-        case 3:
-            // ~ 3 ~
-            
-            // 0 1 1 1 0
-            // 0 0 0 1 0
-            // 0 0 1 1 0
-            // 0 0 0 1 0
-            // 0 1 1 1 0
-            digitGrid[3][digitCenterX - 2][digitCenterY - 2] = 0;
-            digitGrid[3][digitCenterX - 1][digitCenterY - 2] = 1;
-            digitGrid[3][digitCenterX][digitCenterY - 2] = 1;
-            digitGrid[3][digitCenterX + 1][digitCenterY - 2] = 1;
-            digitGrid[3][digitCenterX + 2][digitCenterY - 2] = 0;
-            
-            digitGrid[3][digitCenterX - 2][digitCenterY - 1] = 0;
-            digitGrid[3][digitCenterX - 1][digitCenterY - 1] = 0;
-            digitGrid[3][digitCenterX][digitCenterY - 1] = 0;
-            digitGrid[3][digitCenterX + 1][digitCenterY - 1] = 1;
-            digitGrid[3][digitCenterX + 2][digitCenterY - 1] = 0;
-            
-            digitGrid[3][digitCenterX - 2][digitCenterY] = 0;
-            digitGrid[3][digitCenterX - 1][digitCenterY] = 0;
-            digitGrid[3][digitCenterX][digitCenterY] = 1;
-            digitGrid[3][digitCenterX + 1][digitCenterY] = 1;
-            digitGrid[3][digitCenterX + 2][digitCenterY] = 0;
-            
-            digitGrid[3][digitCenterX - 2][digitCenterY + 1] = 0;
-            digitGrid[3][digitCenterX - 1][digitCenterY + 1] = 0;
-            digitGrid[3][digitCenterX][digitCenterY + 1] = 0;
-            digitGrid[3][digitCenterX + 1][digitCenterY + 1] = 1;
-            digitGrid[3][digitCenterX + 2][digitCenterY + 1] = 0;
-            
-            digitGrid[3][digitCenterX - 2][digitCenterY + 2] = 0;
-            digitGrid[3][digitCenterX - 1][digitCenterY + 2] = 1;
-            digitGrid[3][digitCenterX][digitCenterY + 2] = 1;
-            digitGrid[3][digitCenterX + 1][digitCenterY + 2] = 1;
-            digitGrid[3][digitCenterX + 2][digitCenterY + 2] = 0;
-            break;
-            
-        case 4:
-            // ~ 4 ~
-            
-            // 0 1 0 1 0
-            // 0 1 0 1 0
-            // 0 1 1 1 0
-            // 0 0 0 1 0
-            // 0 0 0 1 0
-            digitGrid[4][digitCenterX - 2][digitCenterY - 2] = 0;
-            digitGrid[4][digitCenterX - 1][digitCenterY - 2] = 0;
-            digitGrid[4][digitCenterX][digitCenterY - 2] = 0;
-            digitGrid[4][digitCenterX + 1][digitCenterY - 2] = 1;
-            digitGrid[4][digitCenterX + 2][digitCenterY - 2] = 0;
-            
-            digitGrid[4][digitCenterX - 2][digitCenterY - 1] = 0;
-            digitGrid[4][digitCenterX - 1][digitCenterY - 1] = 0;
-            digitGrid[4][digitCenterX][digitCenterY - 1] = 0;
-            digitGrid[4][digitCenterX + 1][digitCenterY - 1] = 1;
-            digitGrid[4][digitCenterX + 2][digitCenterY - 1] = 0;
-            
-            digitGrid[4][digitCenterX - 2][digitCenterY] = 0;
-            digitGrid[4][digitCenterX - 1][digitCenterY] = 1;
-            digitGrid[4][digitCenterX][digitCenterY] = 1;
-            digitGrid[4][digitCenterX + 1][digitCenterY] = 1;
-            digitGrid[4][digitCenterX + 2][digitCenterY] = 0;
-            
-            digitGrid[4][digitCenterX - 2][digitCenterY + 1] = 0;
-            digitGrid[4][digitCenterX - 1][digitCenterY + 1] = 1;
-            digitGrid[4][digitCenterX][digitCenterY + 1] = 0;
-            digitGrid[4][digitCenterX + 1][digitCenterY + 1] = 1;
-            digitGrid[4][digitCenterX + 2][digitCenterY + 1] = 0;
-            
-            digitGrid[4][digitCenterX - 2][digitCenterY + 2] = 0;
-            digitGrid[4][digitCenterX - 1][digitCenterY + 2] = 1;
-            digitGrid[4][digitCenterX][digitCenterY + 2] = 0;
-            digitGrid[4][digitCenterX + 1][digitCenterY + 2] = 1;
-            digitGrid[4][digitCenterX + 2][digitCenterY + 2] = 0;
-            break;
-            
-        case 5:
-            // ~ 5 ~
-            
-            // 0 1 1 1 0
-            // 0 1 0 0 0
-            // 0 1 1 1 0
-            // 0 0 0 1 0
-            // 0 1 1 1 0
-            digitGrid[5][digitCenterX - 2][digitCenterY - 2] = 0;
-            digitGrid[5][digitCenterX - 1][digitCenterY - 2] = 1;
-            digitGrid[5][digitCenterX][digitCenterY - 2] = 1;
-            digitGrid[5][digitCenterX + 1][digitCenterY - 2] = 1;
-            digitGrid[5][digitCenterX + 2][digitCenterY - 2] = 0;
-            
-            digitGrid[5][digitCenterX - 2][digitCenterY - 1] = 0;
-            digitGrid[5][digitCenterX - 1][digitCenterY - 1] = 0;
-            digitGrid[5][digitCenterX][digitCenterY - 1] = 0;
-            digitGrid[5][digitCenterX + 1][digitCenterY - 1] = 1;
-            digitGrid[5][digitCenterX + 2][digitCenterY - 1] = 0;
-            
-            digitGrid[5][digitCenterX - 2][digitCenterY] = 0;
-            digitGrid[5][digitCenterX - 1][digitCenterY] = 1;
-            digitGrid[5][digitCenterX][digitCenterY] = 1;
-            digitGrid[5][digitCenterX + 1][digitCenterY] = 1;
-            digitGrid[5][digitCenterX + 2][digitCenterY] = 0;
-            
-            digitGrid[5][digitCenterX - 2][digitCenterY + 1] = 0;
-            digitGrid[5][digitCenterX - 1][digitCenterY + 1] = 1;
-            digitGrid[5][digitCenterX][digitCenterY + 1] = 0;
-            digitGrid[5][digitCenterX + 1][digitCenterY + 1] = 0;
-            digitGrid[5][digitCenterX + 2][digitCenterY + 1] = 0;
-            
-            digitGrid[5][digitCenterX - 2][digitCenterY + 2] = 0;
-            digitGrid[5][digitCenterX - 1][digitCenterY + 2] = 1;
-            digitGrid[5][digitCenterX][digitCenterY + 2] = 1;
-            digitGrid[5][digitCenterX + 1][digitCenterY + 2] = 1;
-            digitGrid[5][digitCenterX + 2][digitCenterY + 2] = 0;
-            break;
-            
-        case 6:
-            // ~ 6 ~
-            
-            // 0 1 0 0 0
-            // 0 1 0 0 0
-            // 0 1 1 1 0
-            // 0 1 0 1 0
-            // 0 1 1 1 0
-            digitGrid[6][digitCenterX - 2][digitCenterY - 2] = 0;
-            digitGrid[6][digitCenterX - 1][digitCenterY - 2] = 1;
-            digitGrid[6][digitCenterX][digitCenterY - 2] = 1;
-            digitGrid[6][digitCenterX + 1][digitCenterY - 2] = 1;
-            digitGrid[6][digitCenterX + 2][digitCenterY - 2] = 0;
-            
-            digitGrid[6][digitCenterX - 2][digitCenterY - 1] = 0;
-            digitGrid[6][digitCenterX - 1][digitCenterY - 1] = 1;
-            digitGrid[6][digitCenterX][digitCenterY - 1] = 0;
-            digitGrid[6][digitCenterX + 1][digitCenterY - 1] = 1;
-            digitGrid[6][digitCenterX + 2][digitCenterY - 1] = 0;
-            
-            digitGrid[6][digitCenterX - 2][digitCenterY] = 0;
-            digitGrid[6][digitCenterX - 1][digitCenterY] = 1;
-            digitGrid[6][digitCenterX][digitCenterY] = 1;
-            digitGrid[6][digitCenterX + 1][digitCenterY] = 1;
-            digitGrid[6][digitCenterX + 2][digitCenterY] = 0;
-            
-            digitGrid[6][digitCenterX - 2][digitCenterY + 1] = 0;
-            digitGrid[6][digitCenterX - 1][digitCenterY + 1] = 1;
-            digitGrid[6][digitCenterX][digitCenterY + 1] = 0;
-            digitGrid[6][digitCenterX + 1][digitCenterY + 1] = 0;
-            digitGrid[6][digitCenterX + 2][digitCenterY + 1] = 0;
-            
-            digitGrid[6][digitCenterX - 2][digitCenterY + 2] = 0;
-            digitGrid[6][digitCenterX - 1][digitCenterY + 2] = 1;
-            digitGrid[6][digitCenterX][digitCenterY + 2] = 0;
-            digitGrid[6][digitCenterX + 1][digitCenterY + 2] = 0;
-            digitGrid[6][digitCenterX + 2][digitCenterY + 2] = 0;
-            break;
-            
-        case 7:
-            // ~ 7 ~
-            
-            // 0 1 1 1 0
-            // 0 0 0 1 0
-            // 0 0 0 1 0
-            // 0 0 0 1 0
-            // 0 0 0 1 0
-            digitGrid[7][digitCenterX - 2][digitCenterY - 2] = 0;
-            digitGrid[7][digitCenterX - 1][digitCenterY - 2] = 0;
-            digitGrid[7][digitCenterX][digitCenterY - 2] = 0;
-            digitGrid[7][digitCenterX + 1][digitCenterY - 2] = 1;
-            digitGrid[7][digitCenterX + 2][digitCenterY - 2] = 0;
-            
-            digitGrid[7][digitCenterX - 2][digitCenterY - 1] = 0;
-            digitGrid[7][digitCenterX - 1][digitCenterY - 1] = 0;
-            digitGrid[7][digitCenterX][digitCenterY - 1] = 0;
-            digitGrid[7][digitCenterX + 1][digitCenterY - 1] = 1;
-            digitGrid[7][digitCenterX + 2][digitCenterY - 1] = 0;
-            
-            digitGrid[7][digitCenterX - 2][digitCenterY] = 0;
-            digitGrid[7][digitCenterX - 1][digitCenterY] = 0;
-            digitGrid[7][digitCenterX][digitCenterY] = 0;
-            digitGrid[7][digitCenterX + 1][digitCenterY] = 1;
-            digitGrid[7][digitCenterX + 2][digitCenterY] = 0;
-            
-            digitGrid[7][digitCenterX - 2][digitCenterY + 1] = 0;
-            digitGrid[7][digitCenterX - 1][digitCenterY + 1] = 0;
-            digitGrid[7][digitCenterX][digitCenterY + 1] = 0;
-            digitGrid[7][digitCenterX + 1][digitCenterY + 1] = 1;
-            digitGrid[7][digitCenterX + 2][digitCenterY + 1] = 0;
-            
-            digitGrid[7][digitCenterX - 2][digitCenterY + 2] = 0;
-            digitGrid[7][digitCenterX - 1][digitCenterY + 2] = 1;
-            digitGrid[7][digitCenterX][digitCenterY + 2] = 1;
-            digitGrid[7][digitCenterX + 1][digitCenterY + 2] = 1;
-            digitGrid[7][digitCenterX + 2][digitCenterY + 2] = 0;
-            break;
-            
-        case 8:
-            // ~ 8 ~
-            
-            // 0 1 1 1 0
-            // 0 1 0 1 0
-            // 0 1 1 1 0
-            // 0 1 0 1 0
-            // 0 1 1 1 0
-            digitGrid[8][digitCenterX - 2][digitCenterY - 2] = 0;
-            digitGrid[8][digitCenterX - 1][digitCenterY - 2] = 1;
-            digitGrid[8][digitCenterX][digitCenterY - 2] = 1;
-            digitGrid[8][digitCenterX + 1][digitCenterY - 2] = 1;
-            digitGrid[8][digitCenterX + 2][digitCenterY - 2] = 0;
-            
-            digitGrid[8][digitCenterX - 2][digitCenterY - 1] = 0;
-            digitGrid[8][digitCenterX - 1][digitCenterY - 1] = 1;
-            digitGrid[8][digitCenterX][digitCenterY - 1] = 0;
-            digitGrid[8][digitCenterX + 1][digitCenterY - 1] = 1;
-            digitGrid[8][digitCenterX + 2][digitCenterY - 1] = 0;
-            
-            digitGrid[8][digitCenterX - 2][digitCenterY] = 0;
-            digitGrid[8][digitCenterX - 1][digitCenterY] = 1;
-            digitGrid[8][digitCenterX][digitCenterY] = 1;
-            digitGrid[8][digitCenterX + 1][digitCenterY] = 1;
-            digitGrid[8][digitCenterX + 2][digitCenterY] = 0;
-            
-            digitGrid[8][digitCenterX - 2][digitCenterY + 1] = 0;
-            digitGrid[8][digitCenterX - 1][digitCenterY + 1] = 1;
-            digitGrid[8][digitCenterX][digitCenterY + 1] = 0;
-            digitGrid[8][digitCenterX + 1][digitCenterY + 1] = 1;
-            digitGrid[8][digitCenterX + 2][digitCenterY + 1] = 0;
-            
-            digitGrid[8][digitCenterX - 2][digitCenterY + 2] = 0;
-            digitGrid[8][digitCenterX - 1][digitCenterY + 2] = 1;
-            digitGrid[8][digitCenterX][digitCenterY + 2] = 1;
-            digitGrid[8][digitCenterX + 1][digitCenterY + 2] = 1;
-            digitGrid[8][digitCenterX + 2][digitCenterY + 2] = 0;
-            break;
-            
-        case 9:
-            // ~ 9 ~
-            
-            // 0 1 1 1 0
-            // 0 1 0 1 0
-            // 0 1 1 1 0
-            // 0 0 0 1 0
-            // 0 0 0 1 0
-            digitGrid[9][digitCenterX - 2][digitCenterY - 2] = 0;
-            digitGrid[9][digitCenterX - 1][digitCenterY - 2] = 0;
-            digitGrid[9][digitCenterX][digitCenterY - 2] = 0;
-            digitGrid[9][digitCenterX + 1][digitCenterY - 2] = 1;
-            digitGrid[9][digitCenterX + 2][digitCenterY - 2] = 0;
-            
-            digitGrid[9][digitCenterX - 2][digitCenterY - 1] = 0;
-            digitGrid[9][digitCenterX - 1][digitCenterY - 1] = 0;
-            digitGrid[9][digitCenterX][digitCenterY - 1] = 0;
-            digitGrid[9][digitCenterX + 1][digitCenterY - 1] = 1;
-            digitGrid[9][digitCenterX + 2][digitCenterY - 1] = 0;
-            
-            digitGrid[9][digitCenterX - 2][digitCenterY] = 0;
-            digitGrid[9][digitCenterX - 1][digitCenterY] = 1;
-            digitGrid[9][digitCenterX][digitCenterY] = 1;
-            digitGrid[9][digitCenterX + 1][digitCenterY] = 1;
-            digitGrid[9][digitCenterX + 2][digitCenterY] = 0;
-            
-            digitGrid[9][digitCenterX - 2][digitCenterY + 1] = 0;
-            digitGrid[9][digitCenterX - 1][digitCenterY + 1] = 1;
-            digitGrid[9][digitCenterX][digitCenterY + 1] = 0;
-            digitGrid[9][digitCenterX + 1][digitCenterY + 1] = 1;
-            digitGrid[9][digitCenterX + 2][digitCenterY + 1] = 0;
-            
-            digitGrid[9][digitCenterX - 2][digitCenterY + 2] = 0;
-            digitGrid[9][digitCenterX - 1][digitCenterY + 2] = 1;
-            digitGrid[9][digitCenterX][digitCenterY + 2] = 1;
-            digitGrid[9][digitCenterX + 1][digitCenterY + 2] = 1;
-            digitGrid[9][digitCenterX + 2][digitCenterY + 2] = 0;
-            break;
-            
-        default:
-            cerr << "invalid digit to place: " << digit << endl;
-            break;
-    }
+
+    stringstream key_ss;
+    key_ss << digit << "-" << rotation;
+    string key = key_ss.str();
+
+    for (int i = 0; i < symbols[key].size(); ++i)
+      {
+	for (int j = 0; j < symbols[key][i].size(); ++j)
+	  {
+	    digitGrid[digit][digitCenterX - 2 + i][digitCenterY - 2 + j] = symbols[key][i][j];
+	  }
+      }
 }
 
 // sums a vector of values
