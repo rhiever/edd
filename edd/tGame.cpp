@@ -320,39 +320,71 @@ string tGame::executeGame(tAgent* eddAgent, FILE *dataFile, bool report, int gri
                 }
             }
 
-	    // "periphery" sensors
-            // these are 4 sensors that tell the agent its relative position to the digit
+	    // raycast periphery sensors
+            // these are 4 raycast sensors that project from the 4 sides of the agent
+	    // possibly useful for finding the digit and orienting itself
 
-            // "up" sensor
-            if (digitCentersY[digit] - cameraY > 0)
-              {
-		eddAgent->states[9] = 1;
+	    int curX = 0, curY = 0;
+
+	    // top sensor
+	    for (curX = cameraX, curY = cameraY + 2; curY < gridSizeY; ++curY)
+	      {
+		// if the current position is outside of the grid, skip it
+		if (curY < 0 || curY >= gridSizeY) continue;
+		if (curX < 0 || curX >= gridSizeX) break;
+
+		if (digitGrid[digit][curX][curY] == 1)
+		  {
+		    eddAgent->states[9] = 1;
+		    break;
+		  }
+	      }
+
+	    // bottom sensor
+	    for (curX = cameraX, curY = cameraY - 2; curY >= 0; --curY)
+	      {
+		// if the current position is outside of the grid, skip it
+		if (curY < 0 || curY >= gridSizeY) continue;
+		if (curX < 0 || curX >= gridSizeX) break;
+
+		if (digitGrid[digit][curX][curY] == 1)
+                  {
+                    eddAgent->states[10] = 1;
+                    break;
+                  }
               }
 
-            // "down" sensor
-            else if (digitCentersY[digit] - cameraY < 0)
-              {
-                eddAgent->states[10] = 1;
+	    // right sensor
+            for (curX = cameraX + 2, curY = cameraY; curX < gridSizeX; ++curX)
+	      {
+		// if the current position is outside of the grid, skip it
+		if (curX < 0 || curX >= gridSizeX) continue;
+                if (curY < 0 || curY >= gridSizeY) break;
+		
+		if (digitGrid[digit][curX][curY] == 1)
+                  {
+                    eddAgent->states[11] = 1;
+                    break;
+                  }
               }
 
-            // "left" sensor
-            if (digitCentersX[digit] - cameraX < 0)
+            // left sensor
+	    for (curX = cameraX - 2, curY = cameraY; curX >= 0; --curX)
               {
-                eddAgent->states[11] = 1;
-              }
-
-	    // "right" sensor
-            else if(digitCentersX[digit] - cameraX > 0)
-              {
-                eddAgent->states[12] = 1;
+		// if the current position is outside of the grid, skip it
+		if (curX < 0 || curX >= gridSizeX) continue;
+		if (curY < 0 || curY >= gridSizeY) break;
+		
+                if (digitGrid[digit][curX][curY] == 1)
+                  {
+                    eddAgent->states[12] = 1;
+                    break;
+                  }
               }
             
             // activate the edd agent's brain
-            for (int updateCounter = 0; updateCounter < 1; ++updateCounter)
-            {
-                eddAgent->updateStates();
-            }
-            
+	    eddAgent->updateStates();
+                        
             // get edd agent's action
             // possible actions:
             //      move up/down: 2
