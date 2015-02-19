@@ -31,15 +31,18 @@
 #include <string>
 
 // simulation-specific constants
-#define totalStepsInSimulation      20
+#define totalStepsInSimulation      40
 #define MAX_CAM_SIZE                3
 
 // each sensor's (x, y) offset from the center of the camera
-map< int, vector<int> > sensorOffsetMap;
+vector< vector<int> > sensorOffsetMap;
 
 map< string, vector< vector<int> > > symbols;
+vector<string> symbol_keys;
+vector<int> symbol_labels;
+vector< vector< vector<int> > > digitGrid;
 
-tGame::tGame()
+tGame::tGame(int gridSizeX, int gridSizeY)
 {
     // pre-compute the sensor offsets
     // to maintain the same order of inputs, start counting sensors from the inside.
@@ -56,7 +59,7 @@ tGame::tGame()
     int offsetX = 0, offsetY = 0;
     int offsetAmount = 0;
     
-    for (int sensor = 0; sensor < 111 * 111; ++sensor)
+    for (int sensor = 0; sensor < 3 * 3; ++sensor)
     {
         int root = sqrt(sensor);
         if (root % 2 == 1 && root * root == sensor)
@@ -85,10 +88,10 @@ tGame::tGame()
         vector<int> offsets;
         offsets.push_back(offsetX);
         offsets.push_back(offsetY);
-        sensorOffsetMap[sensor] = offsets;
+        sensorOffsetMap.push_back(offsets);
     }
     
-    ifstream symbolFile ("symbols.txt");
+    ifstream symbolFile ("mnist.train.subset.discrete.13x13");
     string line;
     string key = "";
     vector< vector<int> > symbol;
@@ -121,28 +124,18 @@ tGame::tGame()
 	else
 	  {
 	    symbols[key] = symbol;
+	    symbol_keys.push_back(key);
+	    symbol_labels.push_back(atoi(key.substr(0, key.find("-")).c_str()));
 	  }
       }
 
     symbolFile.close();
-}
-
-tGame::~tGame() { }
-
-// runs the simulation for the given agent(s)
-string tGame::executeGame(tAgent* eddAgent, FILE *dataFile, bool report, int gridSizeX, int gridSizeY, bool zoomingCamera, bool randomPlacement, bool randomStart, bool noise, float noiseAmount, bool digitRotation)
-{
-    stringstream reportString;
     
-    // grid that the digits are placed in
-    // first index is for the digit (0-9)
-    // following two indeces are the X and Y positions in that digit's grid
-    // (center - 2, center - 2) is the bottom-left corner of the digit
-    // the digit is always 5x5
-    vector< vector< vector<int> > > digitGrid;
-    digitGrid.resize(10);
+    // place the digits in the digit grid for the edd agent to view
+    int num_symbol_keys = (int)symbol_keys.size();
+    digitGrid.resize(num_symbol_keys);
     
-    for (int digit = 0; digit < 10; ++digit)
+    for (int digit = 0; digit < num_symbol_keys; ++digit)
     {
         digitGrid[digit].resize(gridSizeX);
         for (int x = 0; x < gridSizeX; ++x)
@@ -154,51 +147,32 @@ string tGame::executeGame(tAgent* eddAgent, FILE *dataFile, bool report, int gri
     // if the digits are being randomly placed, place all 10 digits (0-9)
     // in random spots on the grid at the beginning of every simulation
     // otherwise, place all 10 digits (0-9) centered in the grid
-    int digitCentersX[10], digitCentersY[10];
-    int digitRotated[10];
-    
-    for (int digit = 0; digit < 10; ++digit)
+    for (int digit = 0; digit < num_symbol_keys; ++digit)
     {
         int digitCenterX = (int)(gridSizeX / 2.0), digitCenterY = (int)(gridSizeY / 2.0);
         
-        if (randomPlacement)
-        {
-            bool validPlacement = false;
-            
-            while (!validPlacement)
-            {
-                digitCenterX = randDouble * gridSizeX;
-                digitCenterY = randDouble * gridSizeY;
-                
-                if (digitCenterX - 2 >= 0 && digitCenterX + 2 < gridSizeX &&
-                    digitCenterY - 2 >= 0 && digitCenterY + 2 < gridSizeY)
-                {
-                    validPlacement = true;
-                }
-            }
-
-        }
-
-	digitRotated[digit] = 0;
-
-	if (digitRotation)
-	  {
-	    do
-	      {
-		digitRotated[digit] = (int)(randDouble * 4.0);
-	      } while (digitRotated[digit] == 4);
-	  }
-	
-        placeDigit(digitGrid, digit, digitRotated[digit], digitCenterX, digitCenterY);
-        
-        digitCentersX[digit] = digitCenterX;
-        digitCentersY[digit] = digitCenterY;
+        placeDigit(digitGrid, digit, digitCenterX, digitCenterY);
     }
+}
 
+tGame::~tGame() { }
+
+// runs the simulation for the given agent(s)
+string tGame::executeGame(tAgent* eddAgent, FILE *dataFile, bool report, int gridSizeX, int gridSizeY, bool zoomingCamera, bool randomStart, bool noise, float noiseAmount)
+{
+    stringstream reportString;
+    
+    // grid that the digits are placed in
+    // first index is for the digit (0-9)
+    // following two indeces are the X and Y positions in that digit's grid
+    // (center - 2, center - 2) is the bottom-left corner of the digit
+    // the digit is always 5x5
+    int num_symbol_keys = (int)symbol_keys.size();
+    
     // visualize the digits
-    /*for (int digit = 0; digit < 10; ++digit)
+    /*for (int digit = 0; digit < num_symbol_keys; ++digit)
       {
-	cout << digit << endl;
+	cout << symbol_keys[digit] << endl;
 	
 	for (int x = 0; x < gridSizeX; ++x)
 	  {
@@ -209,7 +183,8 @@ string tGame::executeGame(tAgent* eddAgent, FILE *dataFile, bool report, int gri
 	    cout << endl;
 	  }
 	cout << "---" << endl;
-      }*/
+      }
+    exit(0);*/
 
     // set up brain for EDD agent
     eddAgent->setupPhenotype();
@@ -231,9 +206,9 @@ string tGame::executeGame(tAgent* eddAgent, FILE *dataFile, bool report, int gri
     
     /*       BEGINNING OF SIMULATION LOOP       */
     
-    // test the edd agent on all 10 digits (0-9)
+    // test the edd agent on all digits in random order
     vector<int> digits;
-    for (int digit = 0; digit < 10; ++digit)
+    for (int digit = 0; digit < num_symbol_keys; ++digit)
     {
         digits.push_back(digit);
     }
@@ -259,7 +234,9 @@ string tGame::executeGame(tAgent* eddAgent, FILE *dataFile, bool report, int gri
         
         if (report)
         {
-	  reportString << digit << "-" << digitRotated[digit] << "," << digitCentersX[digit] << "," << digitCentersY[digit] << "," << gridSizeX << "," << gridSizeY << "\n";
+            int digitCenterX = (int)(gridSizeX / 2.0), digitCenterY = (int)(gridSizeY / 2.0);
+            
+	  reportString << symbol_keys[digit] << "," << digitCenterX << "," << digitCenterY << "," << gridSizeX << "," << gridSizeY << "\n";
         }
         
         for (int step = 0; step < totalStepsInSimulation; ++step)
@@ -320,39 +297,71 @@ string tGame::executeGame(tAgent* eddAgent, FILE *dataFile, bool report, int gri
                 }
             }
 
-	    // "periphery" sensors
-            // these are 4 sensors that tell the agent its relative position to the digit
+	    // raycast periphery sensors
+            // these are 4 raycast sensors that project from the 4 sides of the agent
+	    // possibly useful for finding the digit and orienting itself
 
-            // "up" sensor
-            if (digitCentersY[digit] - cameraY > 0)
-              {
-		eddAgent->states[9] = 1;
+	    int curX = 0, curY = 0;
+
+	    // top sensor
+	    for (curX = cameraX, curY = cameraY + 2; curY < gridSizeY; ++curY)
+	      {
+		// if the current position is outside of the grid, skip it
+		if (curY < 0 || curY >= gridSizeY) continue;
+		if (curX < 0 || curX >= gridSizeX) break;
+
+		if (digitGrid[digit][curX][curY] == 1)
+		  {
+		    eddAgent->states[9] = 1;
+		    break;
+		  }
+	      }
+
+	    // bottom sensor
+	    for (curX = cameraX, curY = cameraY - 2; curY >= 0; --curY)
+	      {
+		// if the current position is outside of the grid, skip it
+		if (curY < 0 || curY >= gridSizeY) continue;
+		if (curX < 0 || curX >= gridSizeX) break;
+
+		if (digitGrid[digit][curX][curY] == 1)
+                  {
+                    eddAgent->states[10] = 1;
+                    break;
+                  }
               }
 
-            // "down" sensor
-            else if (digitCentersY[digit] - cameraY < 0)
-              {
-                eddAgent->states[10] = 1;
+	    // right sensor
+            for (curX = cameraX + 2, curY = cameraY; curX < gridSizeX; ++curX)
+	      {
+		// if the current position is outside of the grid, skip it
+		if (curX < 0 || curX >= gridSizeX) continue;
+                if (curY < 0 || curY >= gridSizeY) break;
+		
+		if (digitGrid[digit][curX][curY] == 1)
+                  {
+                    eddAgent->states[11] = 1;
+                    break;
+                  }
               }
 
-            // "left" sensor
-            if (digitCentersX[digit] - cameraX < 0)
+            // left sensor
+	    for (curX = cameraX - 2, curY = cameraY; curX >= 0; --curX)
               {
-                eddAgent->states[11] = 1;
-              }
-
-	    // "right" sensor
-            else if(digitCentersX[digit] - cameraX > 0)
-              {
-                eddAgent->states[12] = 1;
+		// if the current position is outside of the grid, skip it
+		if (curX < 0 || curX >= gridSizeX) continue;
+		if (curY < 0 || curY >= gridSizeY) break;
+		
+                if (digitGrid[digit][curX][curY] == 1)
+                  {
+                    eddAgent->states[12] = 1;
+                    break;
+                  }
               }
             
             // activate the edd agent's brain
-            for (int updateCounter = 0; updateCounter < 1; ++updateCounter)
-            {
-                eddAgent->updateStates();
-            }
-            
+	    eddAgent->updateStates();
+                        
             // get edd agent's action
             // possible actions:
             //      move up/down: 2
@@ -427,32 +436,33 @@ string tGame::executeGame(tAgent* eddAgent, FILE *dataFile, bool report, int gri
         for (int i = 0; i < 10; ++i)
         {
             bool guessedThisDigit = (classifyDigit[i] == 1 && vetoBits[i] == 0);
-            
+	    int correct_digit = symbol_labels[digit];
+
             if (guessedThisDigit)
             {
                 numDigitsGuessed += 1.0;
             }
             
-            if (guessedThisDigit && i == digit)
+            if (guessedThisDigit && i == correct_digit)
             {
                 // true positive
                 eddAgent->truePositives[i] += 1;
                 score = 1.0;
             }
             
-            else if (guessedThisDigit && i != digit)
+            else if (guessedThisDigit && i != correct_digit)
             {
                 // false positive
                 eddAgent->falsePositives[i] += 1;
             }
             
-            else if (!guessedThisDigit && i == digit)
+            else if (!guessedThisDigit && i == correct_digit)
             {
                 // false negative
                 eddAgent->falseNegatives[i] += 1;
             }
             
-            else if (!guessedThisDigit && i != digit)
+            else if (!guessedThisDigit && i != correct_digit)
             {
                 // true negative
                 eddAgent->trueNegatives[i] += 1;
@@ -476,8 +486,8 @@ string tGame::executeGame(tAgent* eddAgent, FILE *dataFile, bool report, int gri
     }
     
     // compute overall fitness
-    eddAgent->fitness = eddAgent->classificationFitness / 10.0;
-    eddAgent->classificationFitness = eddAgent->classificationFitness / 10.0;
+    eddAgent->fitness = eddAgent->classificationFitness / (float)(symbol_keys.size());
+    eddAgent->classificationFitness /= (float)(symbol_keys.size());
     
     // don't allow fitness to be 0 nor negative
     if (eddAgent->fitness <= 0.0)
@@ -500,25 +510,23 @@ string tGame::executeGame(tAgent* eddAgent, FILE *dataFile, bool report, int gri
 }
 
 // place the given digit on the digitGrid at the given point (digitCenterX, digitCenterY)
-void tGame::placeDigit(vector< vector< vector<int> > > &digitGrid, int digit, int rotation, int digitCenterX, int digitCenterY)
+void tGame::placeDigit(vector< vector< vector<int> > > &digitGrid, int symbol_key_index, int digitCenterX, int digitCenterY)
 {
-    for (int i = 0; i < digitGrid[digit].size(); ++i)
+    for (int i = 0; i < digitGrid[symbol_key_index].size(); ++i)
     {
-        for (int j = 0; j < digitGrid[digit][i].size(); ++j)
+        for (int j = 0; j < digitGrid[symbol_key_index][i].size(); ++j)
         {
-            digitGrid[digit][i][j] = 0;
+            digitGrid[symbol_key_index][i][j] = 0;
         }
     }
 
-    stringstream key_ss;
-    key_ss << digit << "-" << rotation;
-    string key = key_ss.str();
+    string key = symbol_keys[symbol_key_index];
 
     for (int i = 0; i < symbols[key].size(); ++i)
       {
 	for (int j = 0; j < symbols[key][i].size(); ++j)
 	  {
-	    digitGrid[digit][digitCenterX - 2 + i][digitCenterY - 2 + j] = symbols[key][i][j];
+	    digitGrid[symbol_key_index][digitCenterX - 6 + i][digitCenterY - 6 + j] = symbols[key][i][j];
 	  }
       }
 }

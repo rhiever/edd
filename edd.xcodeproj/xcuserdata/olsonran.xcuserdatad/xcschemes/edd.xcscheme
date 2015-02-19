@@ -60,11 +60,11 @@
       </BuildableProductRunnable>
       <CommandLineArguments>
          <CommandLineArgument
-            argument = "-e LOD.csv agent.genome -g 50000 -zc -rp -gs 10 10"
+            argument = "-e LOD.csv agent.genome -g 50000 -zc -rs -rp -gs 14 14"
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "-d bestAgent.genome bestAgent.txt -zc -rp -gs 10 10"
+            argument = "-d bestAgent.genome bestAgent.txt -zc -rs -rp -gs 14 14"
             isEnabled = "NO">
          </CommandLineArgument>
       </CommandLineArguments>
@@ -74,7 +74,8 @@
    <ProfileAction
       shouldUseLaunchSchemeArgsEnv = "YES"
       savedToolIdentifier = ""
-      useCustomWorkingDirectory = "NO"
+      useCustomWorkingDirectory = "YES"
+      customWorkingDirectory = "/Users/olsonran/Documents/experiments/edd/work"
       buildConfiguration = "Release"
       debugDocumentVersioning = "YES">
       <BuildableProductRunnable>
