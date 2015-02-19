@@ -40,6 +40,11 @@ vector< vector<int> > sensorOffsetMap;
 map< string, vector< vector<int> > > symbols;
 vector<string> symbol_keys;
 vector<int> symbol_labels;
+
+// grid that the digits are placed in
+// first index is for the digit
+// following two indeces are the X and Y positions in that digit's grid
+// (center - gridSizeX / 2, center - gridSizeY / 2) is the bottom-left corner of the digit
 vector< vector< vector<int> > > digitGrid;
 
 tGame::tGame(int gridSizeX, int gridSizeY)
@@ -153,6 +158,23 @@ tGame::tGame(int gridSizeX, int gridSizeY)
         
         placeDigit(digitGrid, digit, digitCenterX, digitCenterY);
     }
+    
+    // visualize the digits
+    /*for (int digit = 0; digit < num_symbol_keys; ++digit)
+     {
+     cout << symbol_keys[digit] << endl;
+     
+     for (int x = 0; x < gridSizeX; ++x)
+     {
+	    for (int y = 0; y < gridSizeY; ++y)
+     {
+     cout << digitGrid[digit][x][y] << " ";
+     }
+	    cout << endl;
+     }
+     cout << "---" << endl;
+     }
+     exit(0);*/
 }
 
 tGame::~tGame() { }
@@ -161,30 +183,6 @@ tGame::~tGame() { }
 string tGame::executeGame(tAgent* eddAgent, FILE *dataFile, bool report, int gridSizeX, int gridSizeY, bool zoomingCamera, bool randomStart, bool noise, float noiseAmount)
 {
     stringstream reportString;
-    
-    // grid that the digits are placed in
-    // first index is for the digit (0-9)
-    // following two indeces are the X and Y positions in that digit's grid
-    // (center - 2, center - 2) is the bottom-left corner of the digit
-    // the digit is always 5x5
-    int num_symbol_keys = (int)symbol_keys.size();
-    
-    // visualize the digits
-    /*for (int digit = 0; digit < num_symbol_keys; ++digit)
-      {
-	cout << symbol_keys[digit] << endl;
-	
-	for (int x = 0; x < gridSizeX; ++x)
-	  {
-	    for (int y = 0; y < gridSizeY; ++y)
-	      {
-		cout << digitGrid[digit][x][y] << " ";
-	      }
-	    cout << endl;
-	  }
-	cout << "---" << endl;
-      }
-    exit(0);*/
 
     // set up brain for EDD agent
     eddAgent->setupPhenotype();
@@ -208,7 +206,7 @@ string tGame::executeGame(tAgent* eddAgent, FILE *dataFile, bool report, int gri
     
     // test the edd agent on all digits in random order
     vector<int> digits;
-    for (int digit = 0; digit < num_symbol_keys; ++digit)
+    for (int digit = 0; digit < symbol_keys.size(); ++digit)
     {
         digits.push_back(digit);
     }
@@ -227,8 +225,8 @@ string tGame::executeGame(tAgent* eddAgent, FILE *dataFile, bool report, int gri
 	  {
 	    do
 	      {
-		cameraX = (int)(randDouble * gridSizeX);
-		cameraY = (int)(randDouble * gridSizeY);
+              cameraX = (int)(randDouble * gridSizeX);
+              cameraY = (int)(randDouble * gridSizeY);
 	      } while (cameraX == gridSizeX || cameraY == gridSizeY);
 	  }
         
