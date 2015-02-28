@@ -434,33 +434,10 @@ int main(int argc, char *argv[])
         
         if (island_model_sync)
         {
-            DIR *dir;
-            struct dirent *ent;
-            dir = opendir("shared-population/");
-            
-            if (dir != NULL)
-            {
-                // read all of the files in the directory
-                while ((ent = readdir(dir)) != NULL)
-                {
-                    string dirFile = string(ent->d_name);
-                    
-                    // if this replicate's best agent is in the shared population directory, remove it
-                    if (dirFile.find(eddGenomeFileName) != string::npos)
-                    {
-                        stringstream ess;
-                        ess << "shared-population/" << dirFile;
-                        remove(ess.str().c_str());
-                    }
-                }
-                
-                closedir(dir);
-                
-                // save a copy of the best agent in the shared population directory
-                stringstream ess;
-                ess << "shared-population/best-" << eddGenomeFileName << "-gen" << update;
-                bestEddAgent->saveGenome(ess.str().c_str());
-            }
+            // save a copy of the best agent in the shared population directory
+            stringstream ess;
+            ess << "shared-population/best-" << eddGenomeFileName;
+            bestEddAgent->saveGenome(ess.str().c_str());
         }
         
         // display video of simulation
@@ -518,7 +495,7 @@ int main(int argc, char *argv[])
                 {
                     string dirFile = string(ent->d_name);
                     
-                    if (dirFile.find("-gen") == string::npos) continue;
+                    if (dirFile.find("best-") == string::npos) continue;
                     
                     stringstream essSync;
                     essSync << "shared-population/" << dirFile;
