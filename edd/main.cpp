@@ -64,12 +64,13 @@ float   noiseAmount                 = 0.05;
 
 int main(int argc, char *argv[])
 {
-  vector<tAgent*> eddAgents, EANextGen;
-  tAgent *eddAgent = NULL, *bestEddAgent = NULL;
-  double eddMaxFitness = 0.0;
-  string LODFileName = "", eddGenomeFileName = "", inputGenomeFileName = "";
-  string eddDotFileName = "", logicTableFileName = "", visualizationFileName = "";
-  int displayDirectoryArgvIndex = 0;
+    vector<tAgent*> eddAgents, EANextGen;
+    tAgent *eddAgent = NULL, *bestEddAgent = NULL;
+    double eddMaxFitness = 0.0;
+    string LODFileName = "", eddGenomeFileName = "", inputGenomeFileName = "";
+    string eddDotFileName = "", logicTableFileName = "", visualizationFileName = "";
+    int displayDirectoryArgvIndex = 0;
+    int replicateSeed = 0;
   
     // initial object setup
     eddAgents.resize(populationSize);
@@ -121,9 +122,10 @@ int main(int argc, char *argv[])
         else if (strcmp(argv[i], "-s") == 0 && (i + 1) < argc)
         {
             ++i;
-            srand(atoi(argv[i]));
+            replicateSeed = atoi(argv[i]);
+            srand(replicateSeed);
             
-            cout << "random seed set to " << atoi(argv[i]) << endl;
+            cout << "random seed set to " << replicateSeed << endl;
         }
         
         // -g [int]: set generations
@@ -436,7 +438,7 @@ int main(int argc, char *argv[])
         {
             // save a copy of the best agent in the shared population directory
             stringstream ess;
-            ess << "shared-population/best-" << eddGenomeFileName;
+            ess << "shared-population/best-run" << replicateSeed << "agent.genome";
             bestEddAgent->saveGenome(ess.str().c_str());
         }
         
