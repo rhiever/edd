@@ -60,7 +60,7 @@
       </BuildableProductRunnable>
       <CommandLineArguments>
          <CommandLineArgument
-            argument = "-e LOD.csv agent.genome -g 50000 -zc -rs -rp -gs 14 14"
+            argument = "-e run3LOD.csv run4agent.genome -g 50000 -zc -rs -rp -gs 14 14"
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument

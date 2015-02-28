@@ -424,10 +424,43 @@ int main(int argc, char *argv[])
         bestEddAgent = new tAgent;
         bestEddAgent->inherit(eddAgents[eddMaxIndex], 0.0, update, false);
         bestEddAgent->setupPhenotype();
-		
+        
         if (update % 1000 == 0)
         {
             cout << "gen " << update << ": edd [" << eddAvgFitness << " : " << eddMaxFitness << "] [genome: " << bestEddAgent->genome.size() << "] [gates: " << bestEddAgent->hmmus.size() << "]" << endl;
+        }
+        
+        bool island_model_sync = update % 100 == 0;
+        
+        if (island_model_sync)
+        {
+            DIR *dir;
+            struct dirent *ent;
+            dir = opendir("shared-population/");
+            
+            if (dir != NULL)
+            {
+                // read all of the files in the directory
+                while ((ent = readdir(dir)) != NULL)
+                {
+                    string dirFile = string(ent->d_name);
+                    
+                    // if this replicate's best agent is in the shared population directory, remove it
+                    if (dirFile.find(eddGenomeFileName) != string::npos)
+                    {
+                        stringstream ess;
+                        ess << "shared-population/" << dirFile;
+                        remove(ess.str().c_str());
+                    }
+                }
+                
+                closedir(dir);
+                
+                // save a copy of the best agent in the shared population directory
+                stringstream ess;
+                ess << "shared-population/best-" << eddGenomeFileName << "-gen" << update;
+                bestEddAgent->saveGenome(ess.str().c_str());
+            }
         }
         
         // display video of simulation
@@ -451,7 +484,7 @@ int main(int argc, char *argv[])
         
 		for(int i = 0; i < populationSize; i += 2)
 		{
-            // construct swarm agent population for the next generation
+            // construct edd agent population for the next generation
 			tAgent *offspring1 = new tAgent;
             tAgent *offspring2 = new tAgent;
             
@@ -470,17 +503,43 @@ int main(int argc, char *argv[])
             EANextGen[i + 1] = offspring2;
 		}
         
-        // shuffle the populations so there is a minimal chance of the same predator/prey combo in the next generation
-        random_shuffle(EANextGen.begin(), EANextGen.end());
+        // copy in the best agents from other runs
+        if (island_model_sync)
+        {
+            DIR *dir;
+            struct dirent *ent;
+            dir = opendir("shared-population/");
+            int syncCounter = 0;
+            
+            if (dir != NULL)
+            {
+                // read all of the files in the directory
+                while ((ent = readdir(dir)) != NULL)
+                {
+                    string dirFile = string(ent->d_name);
+                    
+                    if (dirFile.find("-gen") == string::npos) continue;
+                    
+                    stringstream essSync;
+                    essSync << "shared-population/" << dirFile;
+                    tAgent *eddAgentSync = new tAgent;
+                    eddAgentSync->loadAgent((char *)essSync.str().c_str());
+                    
+                    eddAgents[syncCounter]->nrPointingAtMe--;
+                    if (EANextGen[syncCounter]->nrPointingAtMe == 0) delete EANextGen[syncCounter];
+                    EANextGen[syncCounter] = eddAgentSync;
+                    ++syncCounter;
+                }
+                
+                closedir(dir);
+            }
+        }
         
 		for(int i = 0; i < populationSize; ++i)
         {
             // replace the edd agents from the previous generation
 			eddAgents[i]->nrPointingAtMe--;
-			if(eddAgents[i]->nrPointingAtMe == 0)
-            {
-				delete eddAgents[i];
-            }
+			if (eddAgents[i]->nrPointingAtMe == 0) delete eddAgents[i];
 			eddAgents[i] = EANextGen[i];
 		}
         
