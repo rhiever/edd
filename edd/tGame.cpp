@@ -96,7 +96,7 @@ tGame::tGame(int gridSizeX, int gridSizeY)
         sensorOffsetMap.push_back(offsets);
     }
     
-    ifstream symbolFile ("mnist.train.subset.discrete.13x13");
+    ifstream symbolFile ("mnist.train.discrete.28x28-only100");
     string line;
     string key = "";
     vector< vector<int> > symbol;
@@ -374,15 +374,16 @@ string tGame::executeGame(tAgent* eddAgent, FILE *dataFile, bool report, int gri
             int moveDown = eddAgent->states[(maxNodes - 2)] & 1;
             int moveLeft = eddAgent->states[(maxNodes - 3)] & 1;
             int moveRight = eddAgent->states[(maxNodes - 4)] & 1;
-            int zoomIn = eddAgent->states[(maxNodes - 5)] & 1;
-            int zoomOut = eddAgent->states[(maxNodes - 6)] & 1;
-            
+            //int zoomIn = eddAgent->states[(maxNodes - 5)] & 1;
+	    //int zoomOut = eddAgent->states[(maxNodes - 6)] & 1;
+	    int doneBit = eddAgent->states[(maxNodes - 5)] & 1;
+
             // edd agent can move the camera
             // possible for up/down and left/right actuators to cancel each other out
-            if (zoomingCamera && moveUp) cameraY += 1;
-            if (zoomingCamera && moveDown) cameraY -= 1;
-            if (zoomingCamera && moveRight) cameraX += 1;
-            if (zoomingCamera && moveLeft) cameraX -= 1;
+            if (zoomingCamera && moveUp) cameraY += 3;
+            if (zoomingCamera && moveDown) cameraY -= 3;
+            if (zoomingCamera && moveRight) cameraX += 3;
+            if (zoomingCamera && moveLeft) cameraX -= 3;
 
 	    if (report)
 	      {
@@ -407,6 +408,8 @@ string tGame::executeGame(tAgent* eddAgent, FILE *dataFile, bool report, int gri
                   }
 		reportString << "\n";
 	      }
+
+	    if (doneBit) break;
 	}
         
         if (report)
@@ -524,7 +527,7 @@ void tGame::placeDigit(vector< vector< vector<int> > > &digitGrid, int symbol_ke
       {
 	for (int j = 0; j < symbols[key][i].size(); ++j)
 	  {
-	    digitGrid[symbol_key_index][digitCenterX - 6 + i][digitCenterY - 6 + j] = symbols[key][i][j];
+	    digitGrid[symbol_key_index][digitCenterX - 14 + i][digitCenterY - 14 + j] = symbols[key][i][j];
 	  }
       }
 }
