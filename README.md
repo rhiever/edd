@@ -15,15 +15,13 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-Compiling
-====================
+# Compiling
 
 Enter the command `./build_edd`
 
 If the console gives an error about permissions, enter `chmod 755 build_edd` and enter the above build command again.
 
-Usage
-====================
+# Usage
 
 Type ./edd to run the simulation. The following parameters can be passed to aBeeDa:
 
@@ -37,16 +35,17 @@ Type ./edd to run the simulation. The following parameters can be passed to aBee
 * -lv: make video of LOD of best agent brain at the end of run
 * -lt [genome in file name] [out file name]: create logic table for given genome
 * -df [genome in file name] [dot out file name]: create dot image file for given genome
+* -zc: allow the active categorical classifier to move around and scan the image
+* -rs: force the active categorical classifier to start at random positions in the image for every image (forces it to learn to generalize)
+* -gs [int] [int]: the width and height of the image in pixels, respectively; strongly recommended to keep the two values equal
 
 -e, -d, -dd, or -df must be passed to edd, otherwise it will not do anything by default.
 
-Output
-====================
+# Output
 
 edd produces a variety of output files, detailed below.
 
-LOD files
----------------------
+## LOD files
 
 There will be a single entry for each ancestor in the final best swarm agent's LOD.
 
@@ -55,21 +54,28 @@ LOD files will be in csv format with the column headers listed at the top. Colum
 * generation: the generation the ancestor was born
 * fitness: the fitness of the ancestor prey
 
-Markov network brain files
----------------------
+## Markov network files
 
-Generally, we save Markov network brain files as .genome files.
+Generally, we save Markov network files as .genome files.
 
-These files contain integer values which encode the Markov network brain.
+These files contain integer values which encode the Markov network.
 
-Logic table files
----------------------
+## Logic table files
 
-The logic table files contain the logic table for the most-likely decision made by the Markov network brain.
+The logic table files contain the logic table for the most-likely decision made by the Markov network.
 
 They are formatted specifically for the Logic Friday logic optimization program. They should be able to be fed directly into the Logic Friday program without any modification.
 
-DOT files
----------------------
+## DOT files
 
-DOT files are the picture representations of Markov network brain structure and connectivity. We recommend using the Graphviz software to view these images.
+DOT files are the picture representations of Markov network structure and connectivity. We recommend using the Graphviz software to view these images.
+
+# Experiment reproducibility
+
+To reproduce the latest results with the active categorical classifier, pass the following parameters to the program.
+
+```
+./edd -e LOD.csv run1agent.genome -s 1 -g 1000000 -zc -rs -gs 28 28 -mr 0.0005 -t 5000
+```
+
+This command will optimize the active categorical classifiers on the MNIST data set for 1,000,000 generations. It will likely take several weeks before the run finishes, so make sure to run it on dedicated, long-running hardware.
