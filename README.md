@@ -1,6 +1,6 @@
 This is the Evolved Digit Detector project.
 
-Copyright 2014 Randal S. Olson, Arend Hintze.
+Copyright 2016 Randal S. Olson
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
