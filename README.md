@@ -35,8 +35,8 @@ Type ./edd to run the simulation. The following parameters can be passed to aBee
 * -lv: make video of LOD of best agent brain at the end of run
 * -lt [genome in file name] [out file name]: create logic table for given genome
 * -df [genome in file name] [dot out file name]: create dot image file for given genome
-* -zc: allow the active categorical classifier to move around and scan the image
-* -rs: force the active categorical classifier to start at random positions in the image for every image (forces it to learn to generalize)
+* -zc: allow the Evolved Digit Detector to move around and scan the image
+* -rs: force the Evolved Digit Detector to start at random positions in the image for every image (forces it to learn to generalize)
 * -gs [int] [int]: the width and height of the image in pixels, respectively; strongly recommended to keep the two values equal
 
 -e, -d, -dd, or -df must be passed to edd, otherwise it will not do anything by default.
@@ -72,10 +72,10 @@ DOT files are the picture representations of Markov network structure and connec
 
 # Experiment reproducibility
 
-To reproduce the latest results with the active categorical classifier, pass the following parameters to the program.
+To reproduce the latest results with the Evolved Digit Detector, pass the following parameters to the program.
 
 ```
 ./edd -e LOD.csv run1agent.genome -s 1 -g 1000000 -zc -rs -gs 28 28 -mr 0.0005 -t 5000
 ```
 
-This command will optimize the active categorical classifiers on the MNIST data set for 1,000,000 generations. It will likely take several weeks before the run finishes, so make sure to run it on dedicated, long-running hardware.
+This command will optimize the Evolved Digit Detectors on the MNIST data set for 1,000,000 generations. It will likely take several weeks before the run finishes, so make sure to run it on dedicated, long-running hardware.
