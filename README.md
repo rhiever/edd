@@ -18,13 +18,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 Compiling
 ====================
 
-Enter the command ./build_edd
+Enter the command `./build_edd`
 
-If the console gives an error about permissions, enter:
-
-chmod 755 build_edd
-
-then enter the above build command again.
+If the console gives an error about permissions, enter `chmod 755 build_edd` and enter the above build command again.
 
 Usage
 ====================
